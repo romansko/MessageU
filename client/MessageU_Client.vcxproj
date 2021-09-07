@@ -91,7 +91,7 @@
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_WIN32_WINNT=0x0A00;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <AdditionalIncludeDirectories>$(ProjectDir)\cryptopp_wrapper\;D:\cryptopp850\;D:\boost_1_77_0\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -145,15 +145,19 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CFileHandler.cpp" />
     <ClCompile Include="cryptopp_wrapper\AESWrapper.cpp" />
     <ClCompile Include="cryptopp_wrapper\Base64Wrapper.cpp" />
     <ClCompile Include="cryptopp_wrapper\RSAWrapper.cpp" />
+    <ClCompile Include="CSocketHandler.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CFileHandler.h" />
     <ClInclude Include="cryptopp_wrapper\AESWrapper.h" />
     <ClInclude Include="cryptopp_wrapper\Base64Wrapper.h" />
     <ClInclude Include="cryptopp_wrapper\RSAWrapper.h" />
+    <ClInclude Include="CSocketHandler.h" />
     <ClInclude Include="protocol.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
