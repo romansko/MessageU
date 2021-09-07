@@ -13,6 +13,9 @@ Instant messaging software. (Maman 15, Defensive Systems Programming).
 * Crypto++ Library 8.5 is used. https://www.cryptopp.com
 
 #### Client project configuration:
+
+Both libraries Boost & Crypto++ are statically built in this guide.
+
 <b>1. Boost 1.77.0 Installation & Configuration</b>
 
 Boost 1.77.0 Installation Instructions are based on [Pattarapol Koosalapeerom's Boost Installation Instructions](https://tomkoos.github.io/cpp/boost-vs.html).
@@ -22,10 +25,10 @@ Boost 1.77.0 Installation Instructions are based on [Pattarapol Koosalapeerom's 
 * Extract the archive file to your directory of choice. Example path: <i>"D:\boost_1_77_0\"</i>
 
 1.2. Complie Boost library
-* Open CMD <b>as administrator</b> inside boost folder. Example path: <i>"D:\boost_1_77_0\bootstrap.bat"</i>
-* The following commands will take a while to build..
-* Type <i><b>bootstrap.bat</b></i> 
-* Type <i><b>b2 install</b></i>
+* Run CMD <b>as administrator</b> inside boost folder.
+* The following commands will take a while to build:
+* Run <i><b>bootstrap.bat</b></i> 
+* Run <i><b>b2 link=static runtime-link=static </b></i>
 
 1.3. Include Boost library in Visual Studio's C++ Project
 
@@ -43,7 +46,6 @@ Boost 1.77.0 Installation Instructions are based on [Pattarapol Koosalapeerom's 
 
 2.2. Complie Crypto++ library
 * Open <i>"D:\cryptopp850\cryptest.sln"</i> with Visual Studio.
-* Change all projects Runtime Library <i>Project > Properties > C/C++ > Code Generation > Runtime Library > <b>Multi-threaded Debug (/MDd)</b></i>
 * Build the solution. Make sure build configuration matches. (For example, Debug, Win32).
 * Close the solution.
 * We will use the static library <i>cryptlib.lib</i>. (If Win32, Debug was built, the library will be located within <i>Win32\Output\Debug</i>).
@@ -54,7 +56,7 @@ Boost 1.77.0 Installation Instructions are based on [Pattarapol Koosalapeerom's 
 * Open Client's Project Properties.
 * Add <i><b>"D:\cryptopp850\"</b></i> under <i>Project > Properties > C/C++ > General > Additional Include Directories</i>
 * Add <i><b>"D:\cryptopp850\Win32\Output\Debug\cryptlib.lib"</b></i> under <i>Project > Properties > Linker > Input > Additional Dependencies</i>
-* Make sure the project's Runtime Library is <i>Project > Properties > C/C++ > Code Generation > Runtime Library > <b>Multi-threaded Debug (/MDd)</b></i>
+* Make sure the project's Runtime Library is <i>Project > Properties > C/C++ > Code Generation > Runtime Library > <b>Multi-threaded Debug (/MTd)</b></i>
 
 <b>3. Additional configurations</b>
 
