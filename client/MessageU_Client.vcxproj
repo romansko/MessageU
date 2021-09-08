@@ -145,6 +145,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="CClientMenu.cpp" />
     <ClCompile Include="CFileHandler.cpp" />
     <ClCompile Include="cryptopp_wrapper\AESWrapper.cpp" />
     <ClCompile Include="cryptopp_wrapper\Base64Wrapper.cpp" />
@@ -153,6 +154,7 @@
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="CClientMenu.h" />
     <ClInclude Include="CFileHandler.h" />
     <ClInclude Include="cryptopp_wrapper\AESWrapper.h" />
     <ClInclude Include="cryptopp_wrapper\Base64Wrapper.h" />

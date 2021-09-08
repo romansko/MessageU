@@ -5,6 +5,8 @@
 #include <iostream>
 #include <iomanip>
 
+#include "protocol.h"
+
 void hexify(const unsigned char* buffer, unsigned int length)
 {
 	std::ios::fmtflags f(std::cout.flags());
@@ -79,12 +81,12 @@ int rsa_example()
 }
 
 
-
-int main()
+/*int main(int argc, char* argv[])
 {
 	aes_example();
 	
 	rsa_example();
 
+	
 	return 0;
-}
+}*/
