@@ -35,7 +35,7 @@ Boost 1.77.0 Installation Instructions are based on [Pattarapol Koosalapeerom's 
 * Open Client's Project Properties.
 * Add <i><b>"D:\boost_1_77_0\"</b></i> under <i>Project > Properties > C/C++ > General > Additional Include Directories</i>
 * Add <i><b>"D:\boost_1_77_0\stage\lib"</b></i> under <i>Project > Properties > Linker > General > Additional Library Directories</i>
-* Define <i><b>WIN32_WINNT=0x0A00</b></i> under <i>Project > Properties > C/C++ > Preprocessor > Preprocessor Definitions</i> (Windows 10. For other OS see this [link](https://docs.microsoft.com/en-us/cpp/porting/modifying-winver-and-win32-winnt?view=msvc-160)).
+* Define <i><b>_WIN32_WINNT=0x0A00</b></i> under <i>Project > Properties > C/C++ > Preprocessor > Preprocessor Definitions</i> (Windows 10. For other OS see this [link](https://docs.microsoft.com/en-us/cpp/porting/modifying-winver-and-win32-winnt?view=msvc-160)).
 
 
 <b>2. Crypto++ 8.5 Installation & Configuration</b>
