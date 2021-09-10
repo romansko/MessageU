@@ -1,16 +1,18 @@
-# This is a sample Python script.
+"""
+MessageU Server
+main.py: Entry point of MessageU Server.
+"""
+__author__ = "Roman Koifman"
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+import utils
+import server
 
-
-def print_hi(name):
-    # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
-
-
-# Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    print_hi('PyCharm')
+    PORT_INFO = "port.info"
+    port = utils.parsePort(PORT_INFO)
+    if port is None:
+        utils.stopServer(f"Failed to parse integer port from '{PORT_INFO}'!")
+    svr = server.Server('', port)  # don't care about host.
+    if not svr.start():
+        utils.stopServer(f"Server start exception: {svr.lastErr}")
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
