@@ -11,11 +11,7 @@
 
 
 /**
-   @brief open a file for read/write. Create folders in filepath if do not exist.
-   @param filepath the file's filepath to open.
-   @param fs file stream which will be opened with the filepath.
-   @param write open file for writing?
-   @return true if opened successfully. false otherwise.
+ * Open a file for read/write. Create folders in filepath if do not exist.
  */
 bool CFileHandler::fileOpen(const std::string& filepath, std::fstream& fs, bool write)
 {
@@ -37,9 +33,7 @@ bool CFileHandler::fileOpen(const std::string& filepath, std::fstream& fs, bool 
 
 
 /**
-   @brief close file stream.
-   @param fs file stream which will be closed.
-   @return true if closed successfully. false otherwise.
+ * Close file stream.
  */
 bool CFileHandler::fileClose(std::fstream& fs)
 {
@@ -55,19 +49,15 @@ bool CFileHandler::fileClose(std::fstream& fs)
 }
 
 /**
-   @brief read bytes from fs to file.
-   @param fs opened file stream to read from.
-   @param file source to copy the data to.
-   @param bytes bytes to read.
-   @return true if read successfully. false, otherwise.
+ * Read bytes from fs to dest.
  */
-bool CFileHandler::fileRead(std::fstream& fs, uint8_t* const file, uint32_t bytes)
+bool CFileHandler::fileRead(std::fstream& fs, uint8_t* const dest, uint32_t bytes)
 {
 	try
 	{
-		if (file == nullptr || bytes == 0)
+		if (dest == nullptr || bytes == 0)
 			return false;
-		fs.read(reinterpret_cast<char*>(file), bytes);
+		fs.read(reinterpret_cast<char*>(dest), bytes);
 		return true;
 	}
 	catch (std::exception&)
@@ -78,19 +68,15 @@ bool CFileHandler::fileRead(std::fstream& fs, uint8_t* const file, uint32_t byte
 
 
 /**
-   @brief write bytes from fs to file.
-   @param fs Opened file stream to write from.
-   @param file the file to read from.
-   @param bytes bytes to write.
-   @return true upon successful write. false otherwise.
+ * Write given bytes from src to fs.
  */
-bool CFileHandler::fileWrite(std::fstream& fs, const uint8_t* const file, const uint32_t bytes)
+bool CFileHandler::fileWrite(std::fstream& fs, const uint8_t* const src, const uint32_t bytes)
 {
 	try
 	{
-		if (file == nullptr || bytes == 0)
+		if (src == nullptr || bytes == 0)
 			return false;
-		fs.write(reinterpret_cast<const char*>(file), bytes);
+		fs.write(reinterpret_cast<const char*>(src), bytes);
 		return true;
 	}
 	catch (std::exception&)
@@ -102,9 +88,7 @@ bool CFileHandler::fileWrite(std::fstream& fs, const uint8_t* const file, const 
 
 
 /**
-   @brief Check if file exists given a file path.
-   @param filePath the file's filepath.
-   @return true if file exists.
+ * Check whether a file exists given a filePath.
  */
 bool CFileHandler::fileExists(const std::string& filePath)
 {
@@ -125,10 +109,7 @@ bool CFileHandler::fileExists(const std::string& filePath)
 
 
 /**
-   @brief Removes a file given a file path.
-   @param filePath the file's filepath to remove.
-   @return true if successfully removed the file. False, otherwise.
-		   If file not exists, return false.
+ * Removes a file given a filePath.
  */
 bool CFileHandler::fileRemove(const std::string& filePath)
 {
@@ -144,9 +125,24 @@ bool CFileHandler::fileRemove(const std::string& filePath)
 
 
 /**
-   @brief calculate file size which is opened by fs.
-   @param fs opened file stream to read from.
-   @return file's size. 0 if failed.
+ * Read a single line from fs to line.
+ */
+bool CFileHandler::fileReadLine(std::fstream& fs, std::string& line)
+{
+	try
+	{
+		std::getline(fs, line);
+		return true;
+	}
+	catch (std::exception&)
+	{
+		return false;
+	}
+}
+
+
+/**
+ * Calculate the file size which is opened by fs.
  */
 uint32_t CFileHandler::fileSize(std::fstream& fs)
 {
