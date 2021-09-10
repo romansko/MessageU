@@ -12,6 +12,7 @@
 
 /**
  * Open a file for read/write. Create folders in filepath if do not exist.
+ * Relative paths not supported!
  */
 bool CFileHandler::fileOpen(const std::string& filepath, std::fstream& fs, bool write)
 {
