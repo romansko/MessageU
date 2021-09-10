@@ -6,6 +6,9 @@
 #include <iomanip>
 
 #include "protocol.h"
+#include "CClientMenu.h"
+#include "CFileHandler.h"
+#include "CSocketHandler.h"
 
 void hexify(const unsigned char* buffer, unsigned int length)
 {
@@ -81,12 +84,17 @@ int rsa_example()
 }
 
 
-/*int main(int argc, char* argv[])
+int main(int argc, char* argv[])
 {
-	aes_example();
-	
-	rsa_example();
+	//aes_example();
+	//rsa_example();
 
+	for (CClientMenu menu;;)
+	{
+		menu.display();
+		system("pause"); // todo remove
+	}
+	
 	
 	return 0;
-}*/
+}

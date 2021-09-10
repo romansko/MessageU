@@ -8,10 +8,32 @@
 
 #include "CClientMenu.h"
 #include <iostream>
-#include <cstdlib>
+
+/**
+ * Print main menu to the screen.
+ */
+void CClientMenu::display()
+{
+	system("cls");
+	std::cout << _welcomeString << std::endl << std::endl
+		<< MENU_REGISTER        << ") Register" << std::endl
+		<< MENU_REQ_CLIENT_LIST << ") Request for client list" << std::endl
+		<< MENU_REQ_PUBLIC_KEY  << ") Request for public key" << std::endl
+		<< MENU_REQ_PENDING_MSG << ") Request for waiting messages" << std::endl
+		<< MENU_SEND_MSG        << ") Send a text message" << std::endl
+		<< MENU_REQ_SYM_KEY     << ") Send a request for symmetric key" << std::endl
+		<< MENU_SEND_SYM_KEY    << ") Send your symmetric key" << std::endl
+#ifdef BONUS
+		<< MENU_SEND_FILE       << ") Send a file" << std::endl
+#endif
+		<< " " << MENU_EXIT     << ") Exit client" << std::endl;
+}
 
 
-int CClientMenu::getUserSelection() const
+/**
+ * Read & Validate user's input according to main menu options.
+ */
+int CClientMenu::readUserInput() const
 {
 	int opt;
 	std::string input;
@@ -20,14 +42,12 @@ int CClientMenu::getUserSelection() const
 	// Clear cin stream. I.e. Only the 1st token will be parsed.
 	std::cin.clear();
 	std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-	
 	try
 	{
 		opt = std::stoi(input);
 	}
 	catch (std::exception&)
 	{
-		std::cout << _invalidChoiceString << std::endl;
 		return INVALID_CHOICE;
 	}
 
@@ -49,33 +69,23 @@ int CClientMenu::getUserSelection() const
 	}
 	default:
 	{
-		std::cout << _invalidChoiceString << std::endl;
 		return INVALID_CHOICE;
 	}
 	}
 }
 
-void CClientMenu::invokeMenu()
-{
-	int userChoice;
-	system("cls");
-	std::cout << _welcomeString << std::endl << std::endl
-		<< MENU_REGISTER        << ") Register" << std::endl
-		<< MENU_REQ_CLIENT_LIST << ") Request for client list" << std::endl
-		<< MENU_REQ_PUBLIC_KEY  << ") Request for public key" << std::endl
-		<< MENU_REQ_PENDING_MSG << ") Request for waiting messages" << std::endl
-		<< MENU_SEND_MSG        << ") Send a text message" << std::endl
-		<< MENU_REQ_SYM_KEY     << ") Send a request for symmetric key" << std::endl
-		<< MENU_SEND_SYM_KEY    << ") Send your symmetric key" << std::endl
-#ifdef BONUS
-		<< MENU_SEND_FILE       << ") Send a file" << std::endl
-#endif
-		<< " " << MENU_EXIT     << ") Exit client" << std::endl;
 
-	do
+/**
+ * Invoke matching function to user's choice. User's choice is validated.
+ */
+void CClientMenu::handleUserChoice()
+{
+	int userChoice = readUserInput();
+	while (userChoice == INVALID_CHOICE)
 	{
-		userChoice = getUserSelection();
-	} while (userChoice == INVALID_CHOICE);
+		std::cout << _invalidInput << std::endl;
+		userChoice = readUserInput();
+	}
 
 	switch (userChoice)
 	{
@@ -125,26 +135,13 @@ void CClientMenu::invokeMenu()
 		break;
 	}
 #endif
-	default:  /* Can't happen. Was validated in getUserSelection. */
+	default:  /* Can't happen. Was validated in readUserInput. */
 	{
 		break;
 	}
 	}
-	
-	system("pause"); // todo remove
+
+
 }
 
 
-
-#define EVER (;;)
-int main(int argc, char* argv[])
-{
-	CClientMenu menu;
-
-	for EVER
-	{
-		menu.invokeMenu();
-	}
-	
-	return 0;
-}

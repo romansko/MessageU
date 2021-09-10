@@ -29,12 +29,13 @@ private:
 	
 	const std::string _welcomeString       = "MessageU client at your service.";
 	const std::string _serverErrorString   = "Server responded with an error";
-	const std::string _invalidChoiceString = "Invalid selection. Please try again..";
+	const std::string _invalidInput        = "Invalid input. Please try again..";
 
 public:
-	void invokeMenu();
+	void display();
+	void handleUserChoice();
 
 private:
-	int getUserSelection() const;
+	int readUserInput() const;
 };
 
