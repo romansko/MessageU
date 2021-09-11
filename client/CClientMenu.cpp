@@ -33,27 +33,30 @@ void CClientMenu::display()
 /**
  * Read & Validate user's input according to main menu options.
  */
-int CClientMenu::readUserInput() const
+int CClientMenu::readValidateUserChoice() const
 {
 	int opt;
-	std::string input;
-	std::cin >> input;
+	const auto input = _clientLogic.readUserInput();
+	
+	// do not allow multiple tokens (separated by tab or space). E.g. "20 20 20" is invalid!
+	if (input.find_first_of(" \t") != std::string::npos)
+		return INVALID_CHOICE;
 
-	// Clear cin stream. I.e. Only the 1st token will be parsed.
-	std::cin.clear();
-	std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+	if (input == "0")   // special case.
+		return MENU_EXIT;
+	
 	try
 	{
 		opt = std::stoi(input);
 	}
-	catch (std::exception&)
+	catch (...)
 	{
 		return INVALID_CHOICE;
 	}
 
 	switch (opt)
 	{
-	case MENU_EXIT:
+	//case MENU_EXIT:       // special case. compared as ascii above.
 	case MENU_REGISTER:
 	case MENU_REQ_CLIENT_LIST:
 	case MENU_REQ_PUBLIC_KEY:
@@ -80,22 +83,27 @@ int CClientMenu::readUserInput() const
  */
 void CClientMenu::handleUserChoice()
 {
-	int userChoice = readUserInput();
+	int userChoice = readValidateUserChoice();
 	while (userChoice == INVALID_CHOICE)
 	{
 		std::cout << _invalidInput << std::endl;
-		userChoice = readUserInput();
+		userChoice = readValidateUserChoice();
 	}
 
+	system("cls");
+	bool success = true;
 	switch (userChoice)
 	{
 	case MENU_EXIT:
 	{
+		std::cout << "MessageU Client will now exit." << std::endl;
+		system("pause");
 		exit(0);
 	}
 	case MENU_REGISTER:
 	{
-		std::cout << "Register" << std::endl;
+		std::cout << "MessageU Client Register" << std::endl;
+		success = _clientLogic.registerClient();
 		break;
 	}
 	case MENU_REQ_CLIENT_LIST:
@@ -135,13 +143,16 @@ void CClientMenu::handleUserChoice()
 		break;
 	}
 #endif
-	default:  /* Can't happen. Was validated in readUserInput. */
+	default:  /* Can't happen. Was validated in readValidateUserChoice. */
 	{
 		break;
 	}
 	}
 
-
+	if (!success)
+	{
+		std::cout << _clientLogic.getLastError() << std::endl;
+	}
 }
 
 
