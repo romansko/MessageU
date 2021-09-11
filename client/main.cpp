@@ -1,14 +1,26 @@
+
 #include "Base64Wrapper.h"
 #include "RSAWrapper.h"
 #include "AESWrapper.h"
 
 #include <iostream>
 #include <iomanip>
+#include <boost/algorithm/string/trim.hpp>  // for trimming strings
 
 #include "protocol.h"
 #include "CClientMenu.h"
 #include "CFileHandler.h"
 #include "CSocketHandler.h"
+
+
+// private globals
+static CFileHandler   fileHandler;
+static CSocketHandler socketHandler;
+static constexpr auto SERVER_INFO = "server.info";  // Should be located near exe file.
+static constexpr auto CLIENT_INFO = "me.info";      // Should be located near exe file.
+static std::string address;   // server address
+static std::string port;      // server port
+
 
 void hexify(const unsigned char* buffer, unsigned int length)
 {
@@ -19,7 +31,6 @@ void hexify(const unsigned char* buffer, unsigned int length)
 	std::cout << std::endl;
 	std::cout.flags(f);
 }
-
 
 int aes_example()
 {
@@ -43,7 +54,6 @@ int aes_example()
 
 	return 0;
 }
-
 
 int rsa_example()
 {
@@ -83,15 +93,60 @@ int rsa_example()
 	return 0;
 }
 
+static void clientStop(std::stringstream& err)
+{
+	std::cout << "Fatal Error: " << err.str() << std::endl << "Client will stop." << std::endl;
+	exit(1);
+}
+
+/**
+ * Parse SERVER_INFO file for server address & port.
+ */
+static void parseServeInfo()
+{
+	std::fstream fs;
+	std::stringstream err;
+	if (!fileHandler.fileOpen(SERVER_INFO, fs))
+	{	
+		err << "Couldn't open " << SERVER_INFO;
+		clientStop(err);
+	}
+	std::string info;
+	if (!fileHandler.fileReadLine(fs, info))
+	{
+		err << "Couldn't read " << SERVER_INFO;
+		clientStop(err);
+	}
+	boost::algorithm::trim(info);
+	const auto pos = info.find(':');
+	if (pos == std::string::npos)
+	{
+		err << SERVER_INFO << " has invalid format! missing separator ':'";
+		clientStop(err);
+	}
+	address = info.substr(0, pos);
+	port = info.substr(pos + 1);
+	if (!socketHandler.isValidIp(address) || !socketHandler.isValidPort(port))
+	{
+		err << SERVER_INFO << " has invalid IP Address or port format!";
+		clientStop(err);
+	}
+}
+
 
 int main(int argc, char* argv[])
 {
 	//aes_example();
 	//rsa_example();
 
+	parseServeInfo();
+	std::cout << CSocketHandler::testSocket(address, port, "Test Socket..") << std::endl;
+	system("pause");
+	
 	for (CClientMenu menu;;)
 	{
 		menu.display();
+		menu.handleUserChoice();
 		system("pause"); // todo remove
 	}
 	
