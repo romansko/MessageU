@@ -21,7 +21,11 @@ bool CFileHandler::fileOpen(const std::string& filepath, std::fstream& fs, bool 
 		if (filepath.empty())
 			return false;
 		// create directories within the path if they are do not exist.
-		(void)create_directories(boost::filesystem::path(filepath).parent_path());
+		const auto parent = boost::filesystem::path(filepath).parent_path();
+		if (!parent.empty())
+		{
+			(void)create_directories(parent);
+		}
 		const auto flags = write ? (std::fstream::binary | std::fstream::out) : (std::fstream::binary | std::fstream::in);
 		fs.open(filepath, flags);
 		return fs.is_open();
