@@ -90,3 +90,13 @@ std::string CSocketHandler::testSocket(std::string& address, std::string& port, 
 	}
 	return ss.str();
 }
+
+bool CSocketHandler::isBigEndian()
+{
+	union
+	{
+		uint32_t i;
+		uint8_t c[sizeof(uint32_t)];
+	}tester{1};
+	return (tester.c[0] == 0);
+}

@@ -22,5 +22,8 @@ public:
 
 	// todo remove
 	static std::string testSocket(std::string& address, std::string& port, const char* msg);
+
+private:
+	bool isBigEndian();
 };
 
