@@ -30,7 +30,7 @@ bool CFileHandler::fileOpen(const std::string& filepath, std::fstream& fs, bool 
 		fs.open(filepath, flags);
 		return fs.is_open();
 	}
-	catch (std::exception&)
+	catch (...)
 	{
 		return false;
 	}
@@ -40,16 +40,15 @@ bool CFileHandler::fileOpen(const std::string& filepath, std::fstream& fs, bool 
 /**
  * Close file stream.
  */
-bool CFileHandler::fileClose(std::fstream& fs)
+void CFileHandler::fileClose(std::fstream& fs)
 {
 	try
 	{
 		fs.close();
-		return true;
 	}
-	catch (std::exception&)
+	catch (...)
 	{
-		return false;
+		/* Do Nothing */
 	}
 }
 
@@ -65,7 +64,7 @@ bool CFileHandler::fileRead(std::fstream& fs, uint8_t* const dest, uint32_t byte
 		fs.read(reinterpret_cast<char*>(dest), bytes);
 		return true;
 	}
-	catch (std::exception&)
+	catch (...)
 	{
 		return false;
 	}
@@ -84,7 +83,7 @@ bool CFileHandler::fileWrite(std::fstream& fs, const uint8_t* const src, const u
 		fs.write(reinterpret_cast<const char*>(src), bytes);
 		return true;
 	}
-	catch (std::exception&)
+	catch (...)
 	{
 		return false;
 	}
@@ -105,7 +104,7 @@ bool CFileHandler::fileExists(const std::string& filePath)
 		const std::ifstream fs(filePath);
 		return (!fs.fail());
 	}
-	catch (std::exception&)
+	catch (...)
 	{
 		return false;
 	}
@@ -122,7 +121,7 @@ bool CFileHandler::fileRemove(const std::string& filePath)
 	{
 		return (0 == std::remove(filePath.c_str()));   // 0 upon success..
 	}
-	catch (std::exception&)
+	catch (...)
 	{
 		return false;
 	}
@@ -139,7 +138,7 @@ bool CFileHandler::fileReadLine(std::fstream& fs, std::string& line)
 		std::getline(fs, line);
 		return true;
 	}
-	catch (std::exception&)
+	catch (...)
 	{
 		return false;
 	}
@@ -161,7 +160,7 @@ uint32_t CFileHandler::fileSize(std::fstream& fs)
 		fs.seekg(cur);    // restore position
 		return static_cast<uint32_t>(size);
 	}
-	catch (std::exception&)
+	catch (...)
 	{
 		return 0;
 	}

@@ -17,7 +17,6 @@
 static CFileHandler   fileHandler;
 static CSocketHandler socketHandler;
 static constexpr auto SERVER_INFO = "server.info";  // Should be located near exe file.
-static constexpr auto CLIENT_INFO = "me.info";      // Should be located near exe file.
 static std::string address;   // server address
 static std::string port;      // server port
 
@@ -117,6 +116,7 @@ static void parseServeInfo()
 		err << "Couldn't read " << SERVER_INFO;
 		clientStop(err);
 	}
+	fileHandler.fileClose(fs);
 	boost::algorithm::trim(info);
 	const auto pos = info.find(':');
 	if (pos == std::string::npos)
@@ -140,8 +140,8 @@ int main(int argc, char* argv[])
 	//rsa_example();
 
 	parseServeInfo();
-	std::cout << CSocketHandler::testSocket(address, port, "Test Socket..") << std::endl;
-	system("pause");
+	//std::cout << CSocketHandler::testSocket(address, port, "Test Socket..") << std::endl;
+	//system("pause");
 	
 	for (CClientMenu menu;;)
 	{

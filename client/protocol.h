@@ -10,6 +10,12 @@
 
 #define DEF_VAL 0   // Default value used to initialize protocol structures.
 
+#ifdef BONUS
+#define CLIENT_VERSION 2
+#else
+#define CLIENT_VERSION 1
+#endif
+
 constexpr size_t CLIENT_ID_SIZE         = 16;
 constexpr size_t CLIENT_NAME_SIZE       = 255;
 constexpr size_t CLIENT_PUBLIC_KEY_SIZE = 160;
@@ -52,11 +58,11 @@ struct SClientID
 
 struct SRequestHeader
 {
-	SClientID clientID;
-    uint8_t   version;
-    uint16_t  code;
-	uint32_t  payloadSize;
-    SRequestHeader(): version(DEF_VAL), code(DEF_VAL), payloadSize(DEF_VAL) {}
+	SClientID     clientID;
+    const uint8_t version;
+    uint16_t      code;
+	uint32_t      payloadSize;
+    SRequestHeader(): version(CLIENT_VERSION), code(DEF_VAL), payloadSize(DEF_VAL) {}
 };
 
 struct SResponseHeader
@@ -71,7 +77,7 @@ struct SPayloadRegistration
 {
 	uint8_t name[CLIENT_NAME_SIZE];  // DEF_VAL terminated.
 	uint8_t publicKey[CLIENT_PUBLIC_KEY_SIZE];
-	SPayloadRegistration(): name{DEF_VAL}, publicKey{DEF_VAL} {}
+	SPayloadRegistration() : name{'\0'}, publicKey{DEF_VAL} {}
 };
 
 struct SPayloadMessage
@@ -86,7 +92,7 @@ struct SClient
 {
 	SClientID clientId;
 	uint8_t   name[CLIENT_NAME_SIZE];  // DEF_VAL terminated.
-	SClient(): name{DEF_VAL} {}
+	SClient(): name{'\0'} {}
 };
 
 struct SPayloadPublicKey

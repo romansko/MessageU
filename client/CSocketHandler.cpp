@@ -28,7 +28,7 @@ bool CSocketHandler::isValidPort(std::string& port)
 		const int p = std::stoi(port);
 		return (p != 0);  // port 0 is invalid..
 	}
-	catch(std::exception&)
+	catch(...)
 	{
 		return false;
 	}
@@ -84,7 +84,7 @@ std::string CSocketHandler::testSocket(std::string& address, std::string& port, 
 		ss << "Server Response: " << reply;
 		s.close();
 	}
-	catch (boost::exception& e)
+	catch (...)
 	{
 		ss << "EXCEPTION: Server up ?";
 	}
