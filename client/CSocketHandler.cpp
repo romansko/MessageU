@@ -46,6 +46,13 @@ bool CSocketHandler::receive(boost::asio::ip::tcp::socket& sock, uint8_t(&buffer
 		memset(buffer, 0, PACKET_SIZE);  // reset array before copying.
 		sock.non_blocking(false);             // make sure socket is blocking.
 		(void) boost::asio::read(sock, boost::asio::buffer(buffer, PACKET_SIZE));
+		if (isBigEndian())
+		{
+			uint8_t bigEndBuff[PACKET_SIZE];
+			convertEndian(buffer, bigEndBuff, PACKET_SIZE);  // convert to big endian
+			memcpy(buffer, bigEndBuff, PACKET_SIZE);  // overrun returned buffer.
+		}
+		
 		return true;
 	}
 	catch(boost::system::system_error&)
