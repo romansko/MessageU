@@ -7,13 +7,22 @@
 
 #include "CSocketHandler.h"
 
+#include <boost/asio.hpp>
 #include <boost/asio/connect.hpp>
 #include <boost/asio/read.hpp>
 #include <boost/asio/write.hpp>
 
+using boost::asio::detail::u_long_type;
+using boost::asio::detail::socket_ops::host_to_network_long;
 
-CSocketHandler::CSocketHandler() : _bigEndian(isBigEndian())
+CSocketHandler::CSocketHandler()
 {
+	union   // Test for endianess
+	{
+		uint32_t i;
+		uint8_t c[sizeof(uint32_t)];
+	}tester{ 1 };
+	_bigEndian = (tester.c[0] == 0);
 }
 
 bool CSocketHandler::isValidIp(std::string& ip)
@@ -39,18 +48,16 @@ bool CSocketHandler::isValidPort(std::string& port)
 }
 
 // Receive (blocking) PACKET_SIZE bytes from socket and copy to buffer.
-bool CSocketHandler::receive(boost::asio::ip::tcp::socket& sock, uint8_t(&buffer)[PACKET_SIZE])
+bool CSocketHandler::receive(tcp::socket& sock, uint8_t(&buffer)[PACKET_SIZE])
 {
 	try
 	{
 		memset(buffer, 0, PACKET_SIZE);  // reset array before copying.
 		sock.non_blocking(false);             // make sure socket is blocking.
-		(void) boost::asio::read(sock, boost::asio::buffer(buffer, PACKET_SIZE));
-		if (isBigEndian())
+		(void) read(sock, boost::asio::buffer(buffer, PACKET_SIZE));
+		if (_bigEndian)
 		{
-			uint8_t bigEndBuff[PACKET_SIZE];
-			convertEndian(buffer, bigEndBuff, PACKET_SIZE);  // convert to big endian
-			memcpy(buffer, bigEndBuff, PACKET_SIZE);  // overrun returned buffer.
+			convertEndian(buffer, PACKET_SIZE);  // convert to big endian
 		}
 		
 		return true;
@@ -63,21 +70,18 @@ bool CSocketHandler::receive(boost::asio::ip::tcp::socket& sock, uint8_t(&buffer
 
 
 // Send (blocking) PACKET_SIZE bytes to socket. Data sent copied from buffer.
-bool CSocketHandler::send(boost::asio::ip::tcp::socket& sock, const uint8_t(&buffer)[PACKET_SIZE])
-{	
+bool CSocketHandler::send(tcp::socket& sock, const uint8_t(&buffer)[PACKET_SIZE])
+{
+	uint8_t buffToSend[PACKET_SIZE];
+	memcpy(buffToSend, buffer, PACKET_SIZE);  // If conversion is needed, work on the copy.
 	try
 	{
 		sock.non_blocking(false);  // blocking socket..
-		if (isBigEndian())
+		if (_bigEndian)
 		{
-			uint8_t lilEndBuff[PACKET_SIZE];
-			convertEndian(buffer, lilEndBuff, PACKET_SIZE);  // convert to little endian.
-			(void)boost::asio::write(sock, boost::asio::buffer(lilEndBuff, PACKET_SIZE));
+			convertEndian(buffToSend, PACKET_SIZE);  // convert to little endian.
 		}
-		else
-		{
-			(void)boost::asio::write(sock, boost::asio::buffer(buffer, PACKET_SIZE));
-		}
+		(void)write(sock, boost::asio::buffer(buffToSend, PACKET_SIZE));
 		return true;
 	}
 	catch (boost::system::system_error&)
@@ -96,14 +100,14 @@ std::string CSocketHandler::testSocket(std::string& address, std::string& port, 
 	try
 	{
 		boost::asio::io_context ioContext;
-		boost::asio::ip::tcp::socket s(ioContext);
-		boost::asio::ip::tcp::resolver resolver(ioContext);
-		boost::asio::connect(s, resolver.resolve(address, port, boost::asio::ip::tcp::resolver::query::canonical_name));
+		tcp::socket s(ioContext);
+		tcp::resolver resolver(ioContext);
+		boost::asio::connect(s, resolver.resolve(address, port, tcp::resolver::query::canonical_name));
 		char req[PACKET_SIZE];
 		strcpy_s(req, msg);
-		boost::asio::write(s, boost::asio::buffer(req, PACKET_SIZE));
+		write(s, boost::asio::buffer(req, PACKET_SIZE));
 		char reply[PACKET_SIZE];
-		boost::asio::read(s, boost::asio::buffer(reply, PACKET_SIZE));
+		read(s, boost::asio::buffer(reply, PACKET_SIZE));
 		ss << "Server Response: " << reply;
 		s.close();
 	}
@@ -114,20 +118,15 @@ std::string CSocketHandler::testSocket(std::string& address, std::string& port, 
 	return ss.str();
 }
 
-bool CSocketHandler::isBigEndian() const
-{
-	union
-	{
-		uint32_t i;
-		uint8_t c[sizeof(uint32_t)];
-	}tester{1};
-	return (tester.c[0] == 0);
-}
 
-void CSocketHandler::convertEndian(const uint8_t* const src, uint8_t* const dst, const size_t size) const
+void CSocketHandler::convertEndian(uint8_t* const buffer, const size_t size) const
 {
+	if (size % sizeof(u_long_type) != 0)
+		return;  // invalid size.
+
 	for (size_t i = 0; i < size; ++i)
 	{
-		dst[i] = src[size - i - 1];
+		const auto val = reinterpret_cast<u_long_type*>(&buffer[i * sizeof(u_long_type)]);
+		*val = host_to_network_long(*val);
 	}
 }
