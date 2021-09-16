@@ -12,6 +12,10 @@
 #include <boost/asio/write.hpp>
 
 
+CSocketHandler::CSocketHandler() : _bigEndian(isBigEndian())
+{
+}
+
 bool CSocketHandler::isValidIp(std::string& ip)
 {
 	in_addr dst;  // dummy
@@ -53,11 +57,20 @@ bool CSocketHandler::receive(boost::asio::ip::tcp::socket& sock, uint8_t(&buffer
 
 // Send (blocking) PACKET_SIZE bytes to socket. Data sent copied from buffer.
 bool CSocketHandler::send(boost::asio::ip::tcp::socket& sock, const uint8_t(&buffer)[PACKET_SIZE])
-{
+{	
 	try
 	{
-		sock.non_blocking(false);  // make sure socket is blocking.
-		(void) boost::asio::write(sock, boost::asio::buffer(buffer, PACKET_SIZE));
+		sock.non_blocking(false);  // blocking socket..
+		if (isBigEndian())
+		{
+			uint8_t lilEndBuff[PACKET_SIZE];
+			convertEndian(buffer, lilEndBuff, PACKET_SIZE);  // convert to little endian.
+			(void)boost::asio::write(sock, boost::asio::buffer(lilEndBuff, PACKET_SIZE));
+		}
+		else
+		{
+			(void)boost::asio::write(sock, boost::asio::buffer(buffer, PACKET_SIZE));
+		}
 		return true;
 	}
 	catch (boost::system::system_error&)
@@ -65,6 +78,9 @@ bool CSocketHandler::send(boost::asio::ip::tcp::socket& sock, const uint8_t(&buf
 		return false;
 	}
 }
+
+
+
 
 
 std::string CSocketHandler::testSocket(std::string& address, std::string& port, const char* msg)  // todo remove
@@ -91,7 +107,7 @@ std::string CSocketHandler::testSocket(std::string& address, std::string& port, 
 	return ss.str();
 }
 
-bool CSocketHandler::isBigEndian()
+bool CSocketHandler::isBigEndian() const
 {
 	union
 	{
@@ -99,4 +115,12 @@ bool CSocketHandler::isBigEndian()
 		uint8_t c[sizeof(uint32_t)];
 	}tester{1};
 	return (tester.c[0] == 0);
+}
+
+void CSocketHandler::convertEndian(const uint8_t* const src, uint8_t* const dst, const size_t size) const
+{
+	for (size_t i = 0; i < size; ++i)
+	{
+		dst[i] = src[size - i - 1];
+	}
 }
