@@ -63,7 +63,7 @@ bool CClientLogic::readClientInfo()
 	if (line.length() >= CLIENT_NAME_SIZE)
 	{
 		clearLastError();
-		_lastError << "Too long username read from " << CLIENT_INFO;
+		_lastError << "Invalid username read from " << CLIENT_INFO;
 		return false;
 	}
 	_username = line;
@@ -129,6 +129,7 @@ bool CClientLogic::registerClient()
 	memcpy(regPayload.publicKey, publicKey.c_str(), publicKey.length());
 
 	// todo: Send to server. Receive UUID. Save to me.info..
+	
 
 	_registered = true;
 	return true;
