@@ -22,7 +22,7 @@ class Server:
 
     def accept(self, sock, mask):
         conn, address = sock.accept()
-        conn.setblocking(Server.IS_BLOCKING)
+        conn.setblocking(Server.IS_BLOCKING)      # we want to avoid it. todo: setblocking(False)
         self.sel.register(conn, selectors.EVENT_READ, self.read)
 
     def read(self, conn, mask):
