@@ -15,6 +15,7 @@ public:
 	void handleUserChoice();
 
 private:
+	void clearMenu() const;
 	int readValidateUserChoice() const;
 
 	const int INVALID_CHOICE = -1;

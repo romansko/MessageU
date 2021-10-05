@@ -14,7 +14,7 @@
  */
 void CClientMenu::display() const
 {
-	system("cls");
+	clearMenu();
 	std::cout << _welcomeString << std::endl << std::endl
 		<< MENU_REGISTER        << ") Register" << std::endl
 		<< MENU_REQ_CLIENT_LIST << ") Request for client list" << std::endl
@@ -27,6 +27,11 @@ void CClientMenu::display() const
 		<< MENU_SEND_FILE       << ") Send a file" << std::endl
 #endif
 		<< " " << MENU_EXIT     << ") Exit client" << std::endl;
+}
+
+void CClientMenu::clearMenu() const
+{
+	system("cls");
 }
 
 
@@ -90,7 +95,7 @@ void CClientMenu::handleUserChoice()
 		userChoice = readValidateUserChoice();
 	}
 
-	system("cls");
+	clearMenu();
 	bool success = true;
 	switch (userChoice)
 	{
