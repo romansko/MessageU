@@ -103,20 +103,19 @@ static void clientStop(std::string err)
  */
 static void parseServeInfo()
 {
-	std::fstream fs;
 	std::stringstream err;
-	if (!fileHandler->fileOpen(SERVER_INFO, fs))
+	if (!fileHandler->open(SERVER_INFO))
 	{	
 		err << "Couldn't open " << SERVER_INFO;
 		clientStop(err.str());
 	}
 	std::string info;
-	if (!fileHandler->fileReadLine(fs, info))
+	if (!fileHandler->readLine(info))
 	{
 		err << "Couldn't read " << SERVER_INFO;
 		clientStop(err.str());
 	}
-	fileHandler->fileClose(fs);
+	fileHandler->close();
 	boost::algorithm::trim(info);
 	const auto pos = info.find(':');
 	if (pos == std::string::npos)
@@ -163,7 +162,7 @@ int main(int argc, char* argv[])
 
 	parseServeInfo();
 
-	testSocket();
+	//testSocket();
 	
 	for (CClientMenu menu;;)
 	{

@@ -10,16 +10,29 @@
 #include <boost/filesystem.hpp>  // for create_directories
 
 
+CFileHandler::CFileHandler() : _fileStream(nullptr)
+{
+}
+
+CFileHandler::~CFileHandler()
+{
+	delete _fileStream;
+}
+
 /**
  * Open a file for read/write. Create folders in filepath if do not exist.
  * Relative paths not supported!
  */
-bool CFileHandler::fileOpen(const std::string& filepath, std::fstream& fs, bool write) const
+bool CFileHandler::open(const std::string& filepath, bool write)
 {
+	if (filepath.empty())
+		return false;
+	
+	delete _fileStream;
+	_fileStream = new std::fstream;
+	
 	try
 	{
-		if (filepath.empty())
-			return false;
 		// create directories within the path if they are do not exist.
 		const auto parent = boost::filesystem::path(filepath).parent_path();
 		if (!parent.empty())
@@ -27,8 +40,8 @@ bool CFileHandler::fileOpen(const std::string& filepath, std::fstream& fs, bool 
 			(void)create_directories(parent);
 		}
 		const auto flags = write ? (std::fstream::binary | std::fstream::out) : (std::fstream::binary | std::fstream::in);
-		fs.open(filepath, flags);
-		return fs.is_open();
+		_fileStream->open(filepath, flags);
+		return _fileStream->is_open();
 	}
 	catch (...)
 	{
@@ -40,28 +53,31 @@ bool CFileHandler::fileOpen(const std::string& filepath, std::fstream& fs, bool 
 /**
  * Close file stream.
  */
-void CFileHandler::fileClose(std::fstream& fs)
+void CFileHandler::close()
 {
 	try
 	{
-		fs.close();
+		if (_fileStream != nullptr)
+			_fileStream->close();
 	}
 	catch (...)
 	{
 		/* Do Nothing */
 	}
+	delete _fileStream;
+	_fileStream = nullptr;
 }
 
 /**
  * Read bytes from fs to dest.
  */
-bool CFileHandler::fileRead(std::fstream& fs, uint8_t* const dest, uint32_t bytes)
+bool CFileHandler::read(uint8_t* const dest, uint32_t bytes) const
 {
+	if (_fileStream == nullptr || dest == nullptr || bytes == 0)
+		return false;
 	try
 	{
-		if (dest == nullptr || bytes == 0)
-			return false;
-		fs.read(reinterpret_cast<char*>(dest), bytes);
+		_fileStream->read(reinterpret_cast<char*>(dest), bytes);
 		return true;
 	}
 	catch (...)
@@ -74,13 +90,13 @@ bool CFileHandler::fileRead(std::fstream& fs, uint8_t* const dest, uint32_t byte
 /**
  * Write given bytes from src to fs.
  */
-bool CFileHandler::fileWrite(std::fstream& fs, const uint8_t* const src, const uint32_t bytes)
+bool CFileHandler::write(const uint8_t* const src, const uint32_t bytes) const
 {
 	try
 	{
-		if (src == nullptr || bytes == 0)
+		if (_fileStream == nullptr || src == nullptr || bytes == 0)
 			return false;
-		fs.write(reinterpret_cast<const char*>(src), bytes);
+		_fileStream->write(reinterpret_cast<const char*>(src), bytes);
 		return true;
 	}
 	catch (...)
@@ -115,7 +131,7 @@ bool CFileHandler::fileExists(const std::string& filePath)
 /**
  * Removes a file given a filePath.
  */
-bool CFileHandler::fileRemove(const std::string& filePath) const
+bool CFileHandler::remove(const std::string& filePath) const
 {
 	try
 	{
@@ -131,11 +147,13 @@ bool CFileHandler::fileRemove(const std::string& filePath) const
 /**
  * Read a single line from fs to line.
  */
-bool CFileHandler::fileReadLine(std::fstream& fs, std::string& line) const
+bool CFileHandler::readLine(std::string& line) const
 {
+	if (_fileStream == nullptr)
+		return false;
 	try
 	{
-		std::getline(fs, line);
+		std::getline(*_fileStream, line);
 		return true;
 	}
 	catch (...)
@@ -148,16 +166,18 @@ bool CFileHandler::fileReadLine(std::fstream& fs, std::string& line) const
 /**
  * Calculate the file size which is opened by fs.
  */
-uint32_t CFileHandler::fileSize(std::fstream& fs)
+uint32_t CFileHandler::size() const
 {
+	if (_fileStream == nullptr)
+		return 0;
 	try
 	{
-		const auto cur = fs.tellg();
-		fs.seekg(0, std::fstream::end);
-		const auto size = fs.tellg();
+		const auto cur = _fileStream->tellg();
+		_fileStream->seekg(0, std::fstream::end);
+		const auto size = _fileStream->tellg();
 		if ((size <= 0) || (size > UINT32_MAX))    // do not support more than uint32 max size files. (up to 4GB).
 			return 0;
-		fs.seekg(cur);    // restore position
+		_fileStream->seekg(cur);    // restore position
 		return static_cast<uint32_t>(size);
 	}
 	catch (...)

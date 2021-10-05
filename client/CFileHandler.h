@@ -12,13 +12,26 @@
 class CFileHandler
 {
 public:
-    bool fileOpen(const std::string& filepath, std::fstream& fs, bool write=false) const;
-    void fileClose(std::fstream& fs);
-    bool fileRead(std::fstream& fs, uint8_t* const dest, uint32_t bytes);
-    bool fileWrite(std::fstream& fs, const uint8_t* const src, const uint32_t bytes);
+	CFileHandler();
+    ~CFileHandler();
+
+	// do not allow
+    CFileHandler(const CFileHandler& other) = delete;
+    CFileHandler(CFileHandler&& other) noexcept = delete;
+    CFileHandler& operator=(const CFileHandler& other) = delete;
+    CFileHandler& operator=(CFileHandler&& other) noexcept = delete;
+
+	// file wrapper functions
+    bool open(const std::string& filepath, bool write = false);
+    void close();
+    bool read(uint8_t* const dest, uint32_t bytes) const;
+    bool write(const uint8_t* const src, const uint32_t bytes) const;
     bool fileExists(const std::string& filepath);
-    bool fileRemove(const std::string& filepath) const;
-    bool fileReadLine(std::fstream& fs, std::string& line) const;
-    uint32_t fileSize(std::fstream& fs);
+    bool remove(const std::string& filepath) const;
+    bool readLine(std::string& line) const;
+    uint32_t size() const;
+
+private:
+    std::fstream* _fileStream;
 };
 

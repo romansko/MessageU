@@ -45,7 +45,7 @@ bool CClientLogic::readClientInfo()
 {
 	std::fstream fs;
 	std::string line;
-	if (!_fileHandler.fileOpen(CLIENT_INFO, fs))
+	if (!_fileHandler.open(CLIENT_INFO))
 	{
 		clearLastError();
 		_lastError << "Couldn't open " << CLIENT_INFO;
@@ -53,7 +53,7 @@ bool CClientLogic::readClientInfo()
 	}
 
 	// Read & Parse username
-	if(!_fileHandler.fileReadLine(fs, line))
+	if(!_fileHandler.readLine(line))
 	{
 		clearLastError();
 		_lastError << "Couldn't read username from " << CLIENT_INFO;
@@ -69,7 +69,7 @@ bool CClientLogic::readClientInfo()
 	_username = line;
 
 	// Read & Parse Client's UUID.
-	if (!_fileHandler.fileReadLine(fs, line))
+	if (!_fileHandler.readLine(line))
 	{
 		clearLastError();
 		_lastError << "Couldn't read client's uuid from " << CLIENT_INFO;
@@ -78,7 +78,7 @@ bool CClientLogic::readClientInfo()
 	_uuid = line;
 
 	// Read & Parse Client's private key.
-	if (!_fileHandler.fileReadLine(fs, line))
+	if (!_fileHandler.readLine(line))
 	{
 		clearLastError();
 		_lastError << "Couldn't read client's private key from " << CLIENT_INFO;
@@ -86,7 +86,7 @@ bool CClientLogic::readClientInfo()
 	}
 	_privateKey = line;
 	_registered = true;
-	_fileHandler.fileClose(fs);
+	_fileHandler.close();
 	return true;
 }
 
@@ -116,10 +116,9 @@ bool CClientLogic::registerClient()
 	regHeader.payloadSize = sizeof(SPayloadRegistration);
 	memcpy(regPayload.name, username.c_str(), username.length());
 
-	// todo: validate correct usage..
 	const auto privateKey = _rsaPrivateWrapper.getPrivateKey();
 	const auto publicKey  = _rsaPrivateWrapper.getPublicKey();
-
+	
 	if (publicKey.size() != CLIENT_PUBLIC_KEY_SIZE)
 	{
 		clearLastError();
