@@ -12,7 +12,7 @@
 /**
  * Print main menu to the screen.
  */
-void CClientMenu::display()
+void CClientMenu::display() const
 {
 	system("cls");
 	std::cout << _welcomeString << std::endl << std::endl

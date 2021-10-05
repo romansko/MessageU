@@ -11,7 +11,7 @@
 class CClientMenu
 {
 public:
-	void display();
+	void display() const;
 	void handleUserChoice();
 
 private:

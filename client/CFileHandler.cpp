@@ -14,7 +14,7 @@
  * Open a file for read/write. Create folders in filepath if do not exist.
  * Relative paths not supported!
  */
-bool CFileHandler::fileOpen(const std::string& filepath, std::fstream& fs, bool write)
+bool CFileHandler::fileOpen(const std::string& filepath, std::fstream& fs, bool write) const
 {
 	try
 	{
@@ -115,7 +115,7 @@ bool CFileHandler::fileExists(const std::string& filePath)
 /**
  * Removes a file given a filePath.
  */
-bool CFileHandler::fileRemove(const std::string& filePath)
+bool CFileHandler::fileRemove(const std::string& filePath) const
 {
 	try
 	{
@@ -131,7 +131,7 @@ bool CFileHandler::fileRemove(const std::string& filePath)
 /**
  * Read a single line from fs to line.
  */
-bool CFileHandler::fileReadLine(std::fstream& fs, std::string& line)
+bool CFileHandler::fileReadLine(std::fstream& fs, std::string& line) const
 {
 	try
 	{
@@ -158,7 +158,7 @@ uint32_t CFileHandler::fileSize(std::fstream& fs)
 		if ((size <= 0) || (size > UINT32_MAX))    // do not support more than uint32 max size files. (up to 4GB).
 			return 0;
 		fs.seekg(cur);    // restore position
-		return static_cast<uint32_t>(size);
+		return size;
 	}
 	catch (...)
 	{
