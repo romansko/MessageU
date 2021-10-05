@@ -158,7 +158,7 @@ uint32_t CFileHandler::fileSize(std::fstream& fs)
 		if ((size <= 0) || (size > UINT32_MAX))    // do not support more than uint32 max size files. (up to 4GB).
 			return 0;
 		fs.seekg(cur);    // restore position
-		return size;
+		return static_cast<uint32_t>(size);
 	}
 	catch (...)
 	{

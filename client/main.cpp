@@ -9,13 +9,11 @@
 
 #include "protocol.h"
 #include "CClientMenu.h"
-#include "CFileHandler.h"
-#include "CSocketHandler.h"
 
 
 // private globals
-static CFileHandler   fileHandler;
-static CSocketHandler socketHandler;
+static CFileHandler* fileHandler = new CFileHandler;
+static CSocketHandler* socketHandler = new CSocketHandler;
 static constexpr auto SERVER_INFO = "server.info";  // Should be located near exe file.
 static std::string address;   // server address
 static std::string port;      // server port
@@ -92,9 +90,11 @@ int rsa_example()
 	return 0;
 }
 
-static void clientStop(std::stringstream& err)
+static void clientStop(std::string err)
 {
-	std::cout << "Fatal Error: " << err.str() << std::endl << "Client will stop." << std::endl;
+	delete fileHandler;
+	delete socketHandler;
+	std::cout << "Fatal Error: " << err << std::endl << "Client will stop." << std::endl;
 	exit(1);
 }
 
@@ -105,34 +105,56 @@ static void parseServeInfo()
 {
 	std::fstream fs;
 	std::stringstream err;
-	if (!fileHandler.fileOpen(SERVER_INFO, fs))
+	if (!fileHandler->fileOpen(SERVER_INFO, fs))
 	{	
 		err << "Couldn't open " << SERVER_INFO;
-		clientStop(err);
+		clientStop(err.str());
 	}
 	std::string info;
-	if (!fileHandler.fileReadLine(fs, info))
+	if (!fileHandler->fileReadLine(fs, info))
 	{
 		err << "Couldn't read " << SERVER_INFO;
-		clientStop(err);
+		clientStop(err.str());
 	}
-	fileHandler.fileClose(fs);
+	fileHandler->fileClose(fs);
 	boost::algorithm::trim(info);
 	const auto pos = info.find(':');
 	if (pos == std::string::npos)
 	{
 		err << SERVER_INFO << " has invalid format! missing separator ':'";
-		clientStop(err);
+		clientStop(err.str());
 	}
 	address = info.substr(0, pos);
 	port = info.substr(pos + 1);
-	if (!socketHandler.isValidIp(address) || !socketHandler.isValidPort(port))
+	if (!socketHandler->isValidIp(address) || !socketHandler->isValidPort(port))
 	{
 		err << SERVER_INFO << " has invalid IP Address or port format!";
-		clientStop(err);
+		clientStop(err.str());
 	}
 }
 
+/************ TODO REMOVE ***************/
+void testSocket()   // todo remove
+{
+	if (!socketHandler->connect(address, port))
+	{
+		std::cout << "Failed connecting.." << std::endl;
+	}
+	const char* msg = "Test Socket...";
+	size_t len = strlen(msg) + 1;
+	if (!socketHandler->send(reinterpret_cast<const uint8_t*>(msg), len))
+	{
+		std::cout << "Failed sending.." << std::endl;
+	}
+	uint8_t buff[PACKET_SIZE];
+	if (!socketHandler->receive(buff))
+	{
+		std::cout << "Failed receiving.." << std::endl;
+	}
+	socketHandler->close();
+	std::cout << buff << std::endl;
+	system("pause");
+}
 
 int main(int argc, char* argv[])
 {
@@ -140,8 +162,8 @@ int main(int argc, char* argv[])
 	//rsa_example();
 
 	parseServeInfo();
-	//std::cout << CSocketHandler::testSocket(address, port, "Test Socket..") << std::endl;
-	//system("pause");
+
+	testSocket();
 	
 	for (CClientMenu menu;;)
 	{
@@ -153,3 +175,4 @@ int main(int argc, char* argv[])
 	
 	return 0;
 }
+
