@@ -9,6 +9,21 @@
 #include "CClientMenu.h"
 #include <iostream>
 
+void CClientMenu::clientStop(std::string error)
+{
+	std::cout << "Fatal Error: " << error << std::endl << "Client will stop." << std::endl;
+	exit(1);
+}
+
+void CClientMenu::initialize()
+{
+	if (!_clientLogic.parseServeInfo())
+	{
+		clientStop(_clientLogic.getLastError());
+	}
+
+}
+
 /**
  * Print main menu to the screen.
  */

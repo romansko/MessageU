@@ -30,6 +30,24 @@ CSocketHandler::~CSocketHandler()
 	close();
 }
 
+std::ostream& operator<<(std::ostream& os, const CSocketHandler& socket)
+{
+	os << socket._address << ':' << socket._port;
+	return os;
+}
+
+bool CSocketHandler::setSocketInfo(const std::string& address, const std::string& port)
+{
+	if (!isValidAddress(address) || !isValidPort(port))
+	{
+		return false;
+	}
+	_address = address;
+	_port = port;
+
+	return true;
+}
+
 void CSocketHandler::clear()
 {
 	delete _ioContext;
@@ -40,14 +58,14 @@ void CSocketHandler::clear()
 	_socket    = nullptr;
 }
 
-bool CSocketHandler::isValidIp(std::string& ip) const
+bool CSocketHandler::isValidAddress(const std::string& address)
 {
-	auto cip = ip.c_str();
+	const auto cip = address.c_str();
 	if ((strcmp(cip, LOCALHOST) == 0) || (strcmp(cip, CLOCALHOST) == 0))  // special case
 		return true;
 	try
 	{
-		(void) boost::asio::ip::address_v4::from_string(ip);
+		(void) boost::asio::ip::address_v4::from_string(address);
 	}
 	catch(...)
 	{
@@ -56,7 +74,7 @@ bool CSocketHandler::isValidIp(std::string& ip) const
 	return true;
 }
 
-bool CSocketHandler::isValidPort(std::string& port) const
+bool CSocketHandler::isValidPort(const std::string& port)
 {
 	try
 	{
@@ -69,9 +87,9 @@ bool CSocketHandler::isValidPort(std::string& port) const
 	}
 }
 
-bool CSocketHandler::connect(std::string& address, std::string& port)
+bool CSocketHandler::connect()
 {
-	if (!isValidIp(address) || !isValidPort(port))
+	if (!isValidAddress(_address) || !isValidPort(_port))
 		return false;
 	try
 	{
@@ -79,7 +97,7 @@ bool CSocketHandler::connect(std::string& address, std::string& port)
 		_ioContext = new io_context;
 		_resolver  = new tcp::resolver(*_ioContext);
 		_socket    = new tcp::socket(*_ioContext);
-		boost::asio::connect(*_socket, _resolver->resolve(address, port, tcp::resolver::query::canonical_name));
+		boost::asio::connect(*_socket, _resolver->resolve(_address, _port, tcp::resolver::query::canonical_name));
 		_socket->non_blocking(false);  // blocking socket..
 		return true;
 	}
@@ -126,6 +144,23 @@ bool CSocketHandler::receive(uint8_t(&buffer)[PACKET_SIZE]) const
 	}
 }
 
+bool CSocketHandler::receive(uint8_t* const buffer, const size_t size) const
+{
+	uint8_t receivedBuffer[PACKET_SIZE] = { 0 };
+	uint8_t* ptr = buffer;
+	size_t bytesLeft = size;
+	while (bytesLeft != 0)
+	{
+		if (!receive(receivedBuffer))
+			return false;
+		const size_t bytesToCopy = (bytesLeft > PACKET_SIZE) ? PACKET_SIZE : bytesLeft;
+		memcpy(ptr, receivedBuffer, bytesToCopy);
+		ptr += PACKET_SIZE;
+		bytesLeft -= bytesToCopy;
+	}
+	return (size != 0);  // if reached here return true unless size = 0.
+}
+
 
 // Send (blocking) PACKET_SIZE bytes to socket. Data sent copied from buffer.
 bool CSocketHandler::send(uint8_t(&buffer)[PACKET_SIZE]) const
@@ -150,21 +185,18 @@ bool CSocketHandler::send(uint8_t(&buffer)[PACKET_SIZE]) const
 
 bool CSocketHandler::send(const uint8_t* const buffer, const size_t size) const
 {
-	uint8_t buffToSend[PACKET_SIZE];
+	uint8_t buffToSend[PACKET_SIZE] = { 0 };
 	const uint8_t* ptr = buffer;
 	size_t bytesLeft = size;
 	while (bytesLeft != 0)
 	{
 		const size_t bytesToSend = (bytesLeft > PACKET_SIZE) ? PACKET_SIZE : bytesLeft;
-		if (bytesToSend < PACKET_SIZE)
-			memset(buffToSend, 0, PACKET_SIZE);
-
 		memcpy(buffToSend, ptr, bytesToSend);
 		if (!send(buffToSend))
 			return false;
+		ptr += bytesToSend;
 		bytesLeft -= bytesToSend;
 	}
-	
 	return (size != 0);  // if reached here return true unless size = 0.
 }
 
@@ -201,3 +233,4 @@ std::string CSocketHandler::testSocket(const char* msg) const
 	}
 	return ss.str();
 }
+

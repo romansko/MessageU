@@ -22,13 +22,17 @@ constexpr size_t CLIENT_PUBLIC_KEY_SIZE = 160;
 constexpr size_t REQUEST_OPTIONS        = 5;
 constexpr size_t RESPONSE_OPTIONS       = 6;
 
-enum ECode
+enum ERequestCode
 {
-	REQUEST_REGISTRATION   = 1000,   // clientID ignored.
+	REQUEST_REGISTRATION   = 1000,   // uuid ignored.
 	REQUEST_USERS          = 1001,   // payload invalid. payloadSize = 0.
 	REQUEST_PUBLIC_KEY     = 1002,
 	REQUEST_SEND_MSG       = 1003,
-	REQUEST_PENDING_MSG    = 1004,   // payload invalid. payloadSize = 0.
+	REQUEST_PENDING_MSG    = 1004    // payload invalid. payloadSize = 0.
+};
+
+enum EResponseCode
+{
 	RESPONSE_REGISTRATION  = 2000,
 	RESPONSE_USERS         = 2001,
 	RESPONSE_PUBLIC_KEY    = 2002,
@@ -52,8 +56,8 @@ enum EMessageType
 
 struct SClientID
 {
-	uint8_t clientID[CLIENT_ID_SIZE];
-	SClientID(): clientID{DEF_VAL} {}
+	uint8_t uuid[CLIENT_ID_SIZE];
+	SClientID(): uuid{DEF_VAL} {}
 };
 
 struct SRequestHeader
@@ -73,11 +77,21 @@ struct SResponseHeader
 	SResponseHeader(): version(DEF_VAL), code(DEF_VAL), payloadSize(DEF_VAL) {}
 };
 
-struct SPayloadRegistration
+struct SRegistrationRequest
 {
-	uint8_t name[CLIENT_NAME_SIZE];  // DEF_VAL terminated.
-	uint8_t publicKey[CLIENT_PUBLIC_KEY_SIZE];
-	SPayloadRegistration() : name{'\0'}, publicKey{DEF_VAL} {}
+	SRequestHeader header;
+	struct SRegistrationPayload
+	{
+		uint8_t name[CLIENT_NAME_SIZE];  // DEF_VAL terminated.
+		uint8_t publicKey[CLIENT_PUBLIC_KEY_SIZE];
+		SRegistrationPayload() : name{ '\0' }, publicKey{ DEF_VAL } {}
+	}payload;
+};
+
+struct SRegistrationResponse
+{
+	SResponseHeader header;
+	SClientID       clientID;
 };
 
 struct SPayloadMessage

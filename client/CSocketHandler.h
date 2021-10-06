@@ -7,6 +7,7 @@
 #pragma once
 #include <string>
 #include <cstdint>
+#include <ostream>
 #include <boost/asio/ip/tcp.hpp>
 
 constexpr size_t PACKET_SIZE = 1024;
@@ -18,6 +19,9 @@ class CSocketHandler
 public:
 	CSocketHandler();
 	~CSocketHandler();
+	
+	friend std::ostream& operator<<(std::ostream& os, const CSocketHandler& socket);
+	bool setSocketInfo(const std::string& address, const std::string& port);
 
 	// do not allow
 	CSocketHandler(const CSocketHandler& other) = delete;
@@ -26,13 +30,14 @@ public:
 	CSocketHandler& operator=(CSocketHandler&& other) noexcept = delete;
 
 	// validations
-	bool isValidIp(std::string& ip) const;
-	bool isValidPort(std::string& port) const;
+	static bool isValidAddress(const std::string& address);
+	static bool isValidPort(const std::string& port);
 
 	// logic
-	bool connect(std::string& address, std::string& port);
+	bool connect();
 	void close();
 	bool receive(uint8_t(&buffer)[PACKET_SIZE]) const;
+	bool receive(uint8_t* const buffer, const size_t size) const;
 	bool send(uint8_t(&buffer)[PACKET_SIZE]) const;
 	bool send(const uint8_t* const buffer, const size_t size) const;
 	
@@ -40,6 +45,8 @@ public:
 	std::string testSocket(const char* msg) const;
 
 private:
+	std::string                     _address;
+	std::string                     _port;
 	boost::asio::io_context*        _ioContext;
 	boost::asio::ip::tcp::resolver* _resolver;
 	boost::asio::ip::tcp::socket*   _socket;

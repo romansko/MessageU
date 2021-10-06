@@ -1,31 +1,42 @@
 #pragma once
 
+#include "protocol.h"
 #include "CFileHandler.h"
 #include "CSocketHandler.h"
 #include "RSAWrapper.h"
 
 constexpr auto CLIENT_INFO = "me.info";   // Should be located near exe file.
+constexpr auto SERVER_INFO = "server.info";  // Should be located near exe file.
 
 class CClientLogic
 {
 public:
 	CClientLogic();
-	std::string readUserInput() const;
+	~CClientLogic();
+	CClientLogic(const CClientLogic& other) = delete;
+	CClientLogic(CClientLogic&& other) noexcept = delete;
+	CClientLogic& operator=(const CClientLogic& other) = delete;
+	CClientLogic& operator=(CClientLogic&& other) noexcept = delete;
 	std::string getLastError() const;
+	static std::string hexify(const unsigned char* buffer, unsigned int length);
+	bool parseServeInfo();
+	std::string readUserInput() const;
+	
 	bool registerClient();
 
 private:
 	void clearLastError();
 	bool readClientInfo();
+	bool writeClientInfo();
+	bool validateHeader(const SResponseHeader& header, const EResponseCode expectedCode);
 
-	std::stringstream _lastError;
-	CFileHandler      _fileHandler;
-	CSocketHandler    _socketHandler;
-	RSAPrivateWrapper _rsaPrivateWrapper;
-	bool              _registered;
-	std::string       _username;
-	std::string       _uuid;
-	std::string       _privateKey;
+	std::stringstream  _lastError;
+	CFileHandler       _fileHandler;
+	CSocketHandler     _socketHandler;
+	RSAPrivateWrapper* _rsaDecryptor;
+	bool               _registered;
+	std::string        _username;
+	SClientID          _uuid;
 
 public:
 	

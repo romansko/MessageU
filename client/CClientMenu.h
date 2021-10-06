@@ -11,10 +11,12 @@
 class CClientMenu
 {
 public:
+	void initialize();
 	void display() const;
 	void handleUserChoice();
 
 private:
+	void clientStop(std::string error);
 	void clearMenu() const;
 	int readValidateUserChoice() const;
 
