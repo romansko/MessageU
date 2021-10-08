@@ -6,6 +6,8 @@
  */
 
 #include "CFileHandler.h"
+
+#include <algorithm>
 #include <fstream>
 #include <boost/filesystem.hpp>  // for create_directories
 
@@ -106,7 +108,6 @@ bool CFileHandler::write(const uint8_t* const src, const uint32_t bytes) const
 }
 
 
-
 /**
  * Check whether a file exists given a filePath.
  */
@@ -153,13 +154,24 @@ bool CFileHandler::readLine(std::string& line) const
 		return false;
 	try
 	{
-		std::getline(*_fileStream, line);
+		if (!std::getline(*_fileStream, line) || line.empty())
+			return false;
 		return true;
 	}
 	catch (...)
 	{
 		return false;
 	}
+}
+
+/**
+ * Write a single string and append an end line character.
+ */
+bool CFileHandler::writeLine(const std::string& line) const
+{
+	std::string newline = line;
+	newline.append("\n");
+	return write(reinterpret_cast<const uint8_t*>(newline.c_str()), newline.size());
 }
 
 

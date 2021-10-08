@@ -19,14 +19,14 @@ public:
 	CClientLogic& operator=(CClientLogic&& other) noexcept = delete;
 	
 	std::string getLastError() const;
-	static std::string hexify(const unsigned char* buffer, unsigned int length);
+	static std::string hexify(const uint8_t* buffer, size_t length);
 	bool parseServeInfo();
 	bool parseClientInfo();
 	bool registerClient(const std::string& username);
 
 private:
 	void clearLastError();
-	bool writeClientInfo();
+	bool storeClientInfo();
 	bool validateHeader(const SResponseHeader& header, const EResponseCode expectedCode);
 
 	std::stringstream  _lastError;

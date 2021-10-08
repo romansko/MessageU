@@ -1,3 +1,6 @@
+# Specifics
+server/server.db
+client/me.info
 
 # Pycharm 2021
 venv/

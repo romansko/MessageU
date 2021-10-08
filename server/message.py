@@ -6,7 +6,8 @@ __author__ = "Roman Koifman"
 
 
 class Message:
-    def __init__(self, to_client, from_client, mtype, content):
+    def __init__(self, msg_id, to_client, from_client, mtype, content):
+        self.ID = msg_id               # Message ID, bytes.
         self.ToClient = to_client      # Receiver's unique ID, 16 bytes.
         self.FromClient = from_client  # Sender's unique ID, 16 bytes.
         self.Type = mtype              # Message type, 1 byte.

@@ -20,14 +20,13 @@ std::string CClientLogic::getLastError() const
 	return _lastError.str();
 }
 
-std::string CClientLogic::hexify(const unsigned char* buffer, unsigned int length)
+std::string CClientLogic::hexify(const uint8_t* buffer, size_t length)
 {
 	std::stringstream hexified;
 	const std::ios::fmtflags f(std::cout.flags());
 	hexified << std::hex;
-	for (size_t i = 0; i < length; i++)
-		hexified << std::setfill('0') << std::setw(2) << (0xFF & buffer[i]) << (((i + 1) % 16 == 0) ? "\n" : " ");
-	hexified << std::endl;
+	for (size_t i = 0; i < length; ++i)
+		hexified << std::setfill('0') << std::setw(2) << (0xFF & buffer[i]);
 	hexified.flags(f);
 	return hexified.str();
 }
@@ -104,17 +103,28 @@ bool CClientLogic::parseClientInfo()
 		_lastError << "Couldn't read client's UUID from " << CLIENT_INFO;
 		return false;
 	}
-	line = Base64Wrapper::decode(line);
-	if (line.size() > sizeof(_uuid.uuid))
+
+	try
+	{
+		for (size_t i = 0; i < sizeof(_uuid.uuid); ++i)
+		{
+			_uuid.uuid[i] = static_cast<uint8_t>(std::stoi(line.substr(i * 2, 2), nullptr, 16));
+		}
+	}
+	catch(...)
 	{
 		clearLastError();
-		_lastError << "Invalid UUID read from " << CLIENT_INFO;
+		_lastError << "Couldn't parse client's UUID from " << CLIENT_INFO;
 		return false;
 	}
-	memcpy(_uuid.uuid, line.c_str(), sizeof(_uuid.uuid));
 
 	// Read & Parse Client's private key.
-	if (!_fileHandler.readLine(line))
+	std::string decodedKey = "";
+	while (_fileHandler.readLine(line))
+	{
+		decodedKey.append(Base64Wrapper::decode(line));
+	}
+	if (decodedKey.empty())
 	{
 		clearLastError();
 		_lastError << "Couldn't read client's private key from " << CLIENT_INFO;
@@ -122,7 +132,7 @@ bool CClientLogic::parseClientInfo()
 	}
 	try
 	{
-		_rsaDecryptor = new RSAPrivateWrapper(Base64Wrapper::decode(line));
+		_rsaDecryptor = new RSAPrivateWrapper(decodedKey);
 	}
 	catch(...)
 	{
@@ -146,9 +156,9 @@ void CClientLogic::clearLastError()
 }
 
 
-bool CClientLogic::writeClientInfo()
+bool CClientLogic::storeClientInfo()
 {
-	if (!_fileHandler.open(CLIENT_INFO))
+	if (!_fileHandler.open(CLIENT_INFO, true))
 	{
 		clearLastError();
 		_lastError << "Couldn't open " << CLIENT_INFO;
@@ -156,7 +166,7 @@ bool CClientLogic::writeClientInfo()
 	}
 
 	// Write username
-	if (!_fileHandler.write(reinterpret_cast<const uint8_t*>(_username.c_str()), _username.size()))
+	if (!_fileHandler.writeLine(_username))
 	{
 		clearLastError();
 		_lastError << "Couldn't write username to " << CLIENT_INFO;
@@ -164,7 +174,8 @@ bool CClientLogic::writeClientInfo()
 	}
 
 	// Write UUID.
-	if (!_fileHandler.write(_uuid.uuid, sizeof(_uuid.uuid)))
+	const auto hexifiedUUID = hexify(_uuid.uuid, sizeof(_uuid.uuid));
+	if (!_fileHandler.writeLine(hexifiedUUID))
 	{
 		clearLastError();
 		_lastError << "Couldn't write UUID to " << CLIENT_INFO;
@@ -240,6 +251,15 @@ bool CClientLogic::registerClient(const std::string& username)
 		_lastError << "Invalid username length!";
 		return false;
 	}
+	for (auto ch : username)
+	{
+		if (!std::isalnum(ch))  // check that username is alphanumeric. [a-zA-Z0-9].
+		{
+			clearLastError();
+			_lastError << "Invalid username! Username may only contain letters and numbers!";
+			return false;
+		}
+	}
 
 	delete _rsaDecryptor;
 	_rsaDecryptor = new RSAPrivateWrapper();
@@ -283,10 +303,13 @@ bool CClientLogic::registerClient(const std::string& username)
 
 	// store received client's ID
 	_uuid = response.clientID;
-
-	if (!writeClientInfo())
+	_username = username;
+	if (!storeClientInfo())
 	{
-		// todo: server registered but write to disk failed.	
+		// todo: server registered but write to disk failed
+		clearLastError();
+		_lastError << "Failed writing client info to " << CLIENT_INFO;
+		return false;
 	}
 
 	return true;

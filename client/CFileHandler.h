@@ -29,6 +29,7 @@ public:
     bool fileExists(const std::string& filepath);
     bool remove(const std::string& filepath) const;
     bool readLine(std::string& line) const;
+    bool writeLine(const std::string& line) const;
     uint32_t size() const;
 
 private:

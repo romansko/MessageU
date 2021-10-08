@@ -152,12 +152,16 @@ void CClientMenu::handleUserChoice()
 		std::cout << "MessageU Client Registration" << std::endl;
 		if (_registered)
 		{
-			std::cout << "You have already registered!";
+			std::cout << "You have already registered!" << std::endl;
 			return;
 		}
 		std::cout << "Please type your username.." << std::endl;
 		const auto username = readUserInput();
 		success = _clientLogic.registerClient(username);
+		if (success)
+		{
+			std::cout << "Successfully registered on server." << std::endl;
+		}
 		_registered = success;
 		break;
 	}
