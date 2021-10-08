@@ -17,16 +17,15 @@ public:
 	CClientLogic(CClientLogic&& other) noexcept = delete;
 	CClientLogic& operator=(const CClientLogic& other) = delete;
 	CClientLogic& operator=(CClientLogic&& other) noexcept = delete;
+	
 	std::string getLastError() const;
 	static std::string hexify(const unsigned char* buffer, unsigned int length);
 	bool parseServeInfo();
-	std::string readUserInput() const;
-	
-	bool registerClient();
+	bool parseClientInfo();
+	bool registerClient(const std::string& username);
 
 private:
 	void clearLastError();
-	bool readClientInfo();
 	bool writeClientInfo();
 	bool validateHeader(const SResponseHeader& header, const EResponseCode expectedCode);
 
@@ -34,7 +33,6 @@ private:
 	CFileHandler       _fileHandler;
 	CSocketHandler     _socketHandler;
 	RSAPrivateWrapper* _rsaDecryptor;
-	bool               _registered;
 	std::string        _username;
 	SClientID          _uuid;
 

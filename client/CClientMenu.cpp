@@ -8,6 +8,16 @@
 
 #include "CClientMenu.h"
 #include <iostream>
+#include <boost/algorithm/string/trim.hpp>
+
+CClientMenu::CClientMenu() : _registered(false)
+{
+}
+
+CClientMenu::~CClientMenu()
+{
+}
+
 
 void CClientMenu::clientStop(std::string error)
 {
@@ -15,12 +25,14 @@ void CClientMenu::clientStop(std::string error)
 	exit(1);
 }
 
+
 void CClientMenu::initialize()
 {
 	if (!_clientLogic.parseServeInfo())
 	{
 		clientStop(_clientLogic.getLastError());
 	}
+	_registered = _clientLogic.parseClientInfo();
 
 }
 
@@ -56,7 +68,7 @@ void CClientMenu::clearMenu() const
 int CClientMenu::readValidateUserChoice() const
 {
 	int opt;
-	const auto input = _clientLogic.readUserInput();
+	const auto input = readUserInput();
 	
 	// do not allow multiple tokens (separated by tab or space). E.g. "20 20 20" is invalid!
 	if (input.find_first_of(" \t") != std::string::npos)
@@ -99,6 +111,21 @@ int CClientMenu::readValidateUserChoice() const
 
 
 /**
+ * Read input from console.
+ */
+std::string CClientMenu::readUserInput() const
+{
+	std::string input;
+	do
+	{
+		std::getline(std::cin, input);
+		boost::algorithm::trim(input);
+	} while (input.empty());
+
+	return input;
+}
+
+/**
  * Invoke matching function to user's choice. User's choice is validated.
  */
 void CClientMenu::handleUserChoice()
@@ -122,8 +149,16 @@ void CClientMenu::handleUserChoice()
 	}
 	case MENU_REGISTER:
 	{
-		std::cout << "MessageU Client Register" << std::endl;
-		success = _clientLogic.registerClient();
+		std::cout << "MessageU Client Registration" << std::endl;
+		if (_registered)
+		{
+			std::cout << "You have already registered!";
+			return;
+		}
+		std::cout << "Please type your username.." << std::endl;
+		const auto username = readUserInput();
+		success = _clientLogic.registerClient(username);
+		_registered = success;
 		break;
 	}
 	case MENU_REQ_CLIENT_LIST:
@@ -174,5 +209,3 @@ void CClientMenu::handleUserChoice()
 		std::cout << _clientLogic.getLastError() << std::endl;
 	}
 }
-
-

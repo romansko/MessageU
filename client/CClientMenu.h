@@ -11,6 +11,8 @@
 class CClientMenu
 {
 public:
+	CClientMenu();
+	~CClientMenu();
 	void initialize();
 	void display() const;
 	void handleUserChoice();
@@ -19,6 +21,7 @@ private:
 	void clientStop(std::string error);
 	void clearMenu() const;
 	int readValidateUserChoice() const;
+	std::string readUserInput() const;
 
 	const int INVALID_CHOICE = -1;
 	enum EOptions
@@ -41,6 +44,7 @@ private:
 	const std::string _invalidInput = "Invalid input. Please try again..";
 
 	CClientLogic _clientLogic;
+	bool         _registered;
 
 };
 

@@ -1,13 +1,11 @@
 #include "CClientLogic.h"
 
-#include <iomanip>
-
 #include <iostream>
+#include <iomanip>
 #include <boost/algorithm/string/trim.hpp>
-
 #include "Base64Wrapper.h"
 
-CClientLogic::CClientLogic() : _rsaDecryptor(nullptr), _registered(false)
+CClientLogic::CClientLogic() : _rsaDecryptor(nullptr)
 {
 }
 
@@ -73,34 +71,7 @@ bool CClientLogic::parseServeInfo()
 	return true;
 }
 
-/**
- * Read input from console.
- */
-std::string CClientLogic::readUserInput() const
-{
-	std::string input;
-	do
-	{
-		std::getline(std::cin, input);
-		boost::algorithm::trim(input);
-	} while (input.empty());
-	
-	return input;
-}
-
-
-/**
- * Reset _lastError StringStream: Empty string, clear errors flag and reset formatting.
- */
-void CClientLogic::clearLastError()
-{
-	const std::stringstream clean;
-	_lastError.str("");
-	_lastError.clear();
-	_lastError.copyfmt(clean);
-}
-
-bool CClientLogic::readClientInfo()
+bool CClientLogic::parseClientInfo()
 {
 	std::string line;
 	if (!_fileHandler.open(CLIENT_INFO))
@@ -111,7 +82,7 @@ bool CClientLogic::readClientInfo()
 	}
 
 	// Read & Parse username
-	if(!_fileHandler.readLine(line))
+	if (!_fileHandler.readLine(line))
 	{
 		clearLastError();
 		_lastError << "Couldn't read username from " << CLIENT_INFO;
@@ -149,11 +120,31 @@ bool CClientLogic::readClientInfo()
 		_lastError << "Couldn't read client's private key from " << CLIENT_INFO;
 		return false;
 	}
-	_rsaDecryptor = new RSAPrivateWrapper(Base64Wrapper::decode(line));
-	_registered = true;
+	try
+	{
+		_rsaDecryptor = new RSAPrivateWrapper(Base64Wrapper::decode(line));
+	}
+	catch(...)
+	{
+		clearLastError();
+		_lastError << "Couldn't parse private key from " << CLIENT_INFO;
+		return false;
+	}
 	_fileHandler.close();
 	return true;
 }
+
+/**
+ * Reset _lastError StringStream: Empty string, clear errors flag and reset formatting.
+ */
+void CClientLogic::clearLastError()
+{
+	const std::stringstream clean;
+	_lastError.str("");
+	_lastError.clear();
+	_lastError.copyfmt(clean);
+}
+
 
 bool CClientLogic::writeClientInfo()
 {
@@ -238,24 +229,15 @@ bool CClientLogic::validateHeader(const SResponseHeader& header, const EResponse
 /**
  * Register client via the server.
  */
-bool CClientLogic::registerClient()
+bool CClientLogic::registerClient(const std::string& username)
 {
 	SRegistrationRequest  request;
 	SRegistrationResponse response;
-	
-	if (_registered)
-	{
-		clearLastError();
-		_lastError << "Client already registered!";
-		return false;
-	}
 
-	std::cout << "Please type your username.." << std::endl;
-	const auto username = readUserInput();
 	if (username.length() >= CLIENT_NAME_SIZE)  // >= because of null termination.
 	{
 		clearLastError();
-		_lastError << "Invalid username (Empty or too long username).";
+		_lastError << "Invalid username length!";
 		return false;
 	}
 
@@ -278,19 +260,19 @@ bool CClientLogic::registerClient()
 	if (!_socketHandler.connect())
 	{
 		clearLastError();
-		_lastError << "Failed connecting to " << _socketHandler;
+		_lastError << "Failed connecting to server on " << _socketHandler;
 		return false;
 	}
 	if (!_socketHandler.send(reinterpret_cast<const uint8_t* const>(&request), sizeof(request)))
 	{
 		clearLastError();
-		_lastError << "Failed sending registration request to " << _socketHandler;
+		_lastError << "Failed sending registration request to server on " << _socketHandler;
 		return false;
 	}
 	if (!_socketHandler.receive(reinterpret_cast<uint8_t* const>(&response), sizeof(response)))
 	{
 		clearLastError();
-		_lastError << "Failed receiving registration response from " << _socketHandler;
+		_lastError << "Failed receiving registration response from server on" << _socketHandler;
 		return false;
 	}
 	_socketHandler.close();
@@ -300,13 +282,12 @@ bool CClientLogic::registerClient()
 		return false;  // error message updated within.
 
 	// store received client's ID
-	_uuid = response.clientID;  
+	_uuid = response.clientID;
 
 	if (!writeClientInfo())
 	{
 		// todo: server registered but write to disk failed.	
 	}
-	
-	_registered = true;
+
 	return true;
 }
