@@ -17,7 +17,7 @@ using boost::asio::detail::socket_ops::host_to_network_long;
 
 CSocketHandler::CSocketHandler() : _ioContext(nullptr), _resolver(nullptr), _socket(nullptr)
 {
-	union   // Test for endianess
+	union   // Test for endianness
 	{
 		uint32_t i;
 		uint8_t c[sizeof(uint32_t)];
@@ -133,7 +133,7 @@ bool CSocketHandler::receive(uint8_t(&buffer)[PACKET_SIZE]) const
 		(void) read(*_socket, boost::asio::buffer(buffer, PACKET_SIZE));
 		if (_bigEndian)
 		{
-			convertEndian(buffer, PACKET_SIZE);  // convert to big endian
+			convertEndianness(buffer, PACKET_SIZE);   // todo: handle correctly
 		}
 		
 		return true;
@@ -171,7 +171,7 @@ bool CSocketHandler::send(uint8_t(&buffer)[PACKET_SIZE]) const
 	{
 		if (_bigEndian)
 		{
-			convertEndian(buffer, PACKET_SIZE);  // convert to little endian.
+			convertEndianness(buffer, PACKET_SIZE);  // todo: handle correctly
 		}
 		(void) write(*_socket, boost::asio::buffer(buffer, PACKET_SIZE));
 		return true;
@@ -200,7 +200,7 @@ bool CSocketHandler::send(const uint8_t* const buffer, const size_t size) const
 	return (size != 0);  // if reached here return true unless size = 0.
 }
 
-void CSocketHandler::convertEndian(uint8_t* const buffer, const size_t size) const
+void CSocketHandler::convertEndianness(uint8_t* const buffer, const size_t size) const
 {
 	if (size % sizeof(u_long_type) != 0)
 		return;  // invalid size.

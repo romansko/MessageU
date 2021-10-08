@@ -1,5 +1,5 @@
 #include "Base64Wrapper.h"
-
+#include <base64.h>
 
 std::string Base64Wrapper::encode(const std::string& str)
 {

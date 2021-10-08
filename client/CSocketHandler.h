@@ -53,7 +53,7 @@ private:
 	bool _bigEndian;
 
 	void clear();
-	void convertEndian(uint8_t* const buffer, const size_t size) const;
+	void convertEndianness(uint8_t* const buffer, const size_t size) const;
 
 	
 };
