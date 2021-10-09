@@ -234,24 +234,4 @@ void CSocketHandler::convertEndianness(uint8_t* const buffer, const size_t size)
 }
 
 
-/************ TODO REMOVE ***************/
-std::string CSocketHandler::testSocket(const char* msg) const
-
-{
-	std::stringstream ss;
-	try
-	{
-		char req[PACKET_SIZE];
-		strcpy_s(req, msg);
-		write(*_socket, boost::asio::buffer(req, PACKET_SIZE));
-		char reply[PACKET_SIZE];
-		read(*_socket, boost::asio::buffer(reply, PACKET_SIZE));
-		ss << "Server Response: " << reply;
-	}
-	catch (...)
-	{
-		ss << "EXCEPTION: Server up ?";
-	}
-	return ss.str();
-}
 

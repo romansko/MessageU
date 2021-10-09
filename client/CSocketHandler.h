@@ -41,9 +41,7 @@ public:
 	bool send(uint8_t(&buffer)[PACKET_SIZE]) const;
 	bool send(const uint8_t* const buffer, const size_t size) const;
 	bool sendReceive(const uint8_t* const toSend, const size_t size, uint8_t* const response, const size_t resSize);
-	
-	// todo remove
-	std::string testSocket(const char* msg) const;
+
 
 private:
 	std::string                     _address;
