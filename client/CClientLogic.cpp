@@ -277,25 +277,13 @@ bool CClientLogic::registerClient(const std::string& username)
 	memcpy(request.payload.name, username.c_str(), username.length());
 	memcpy(request.payload.publicKey, publicKey.c_str(), sizeof(request.payload.publicKey));
 
-	if (!_socketHandler.connect())
+	if (!_socketHandler.sendReceive(reinterpret_cast<const uint8_t* const>(&request), sizeof(request),
+		reinterpret_cast<uint8_t* const>(&response), sizeof(response)))
 	{
 		clearLastError();
-		_lastError << "Failed connecting to server on " << _socketHandler;
+		_lastError << "Failed communicating with server on " << _socketHandler;
 		return false;
 	}
-	if (!_socketHandler.send(reinterpret_cast<const uint8_t* const>(&request), sizeof(request)))
-	{
-		clearLastError();
-		_lastError << "Failed sending registration request to server on " << _socketHandler;
-		return false;
-	}
-	if (!_socketHandler.receive(reinterpret_cast<uint8_t* const>(&response), sizeof(response)))
-	{
-		clearLastError();
-		_lastError << "Failed receiving registration response from server on" << _socketHandler;
-		return false;
-	}
-	_socketHandler.close();
 
 	// parse and validate SRegistrationResponse
 	if (!validateHeader(response.header, RESPONSE_REGISTRATION))
@@ -311,6 +299,22 @@ bool CClientLogic::registerClient(const std::string& username)
 		_lastError << "Failed writing client info to " << CLIENT_INFO;
 		return false;
 	}
+
+	return true;
+}
+
+bool CClientLogic::requestClientsList(bool registered)
+{
+	SRequestHeader request;
+	
+	if (!registered)
+	{
+		// todo do not allow
+	}
+
+	request.code = REQUEST_USERS;
+	memcpy(request.clientID.uuid, _uuid.uuid, sizeof(request.clientID.uuid));
+	
 
 	return true;
 }

@@ -23,6 +23,7 @@ public:
 	bool parseServeInfo();
 	bool parseClientInfo();
 	bool registerClient(const std::string& username);
+	bool requestClientsList(bool registered);
 
 private:
 	void clearLastError();

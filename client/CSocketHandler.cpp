@@ -200,6 +200,27 @@ bool CSocketHandler::send(const uint8_t* const buffer, const size_t size) const
 	return (size != 0);  // if reached here return true unless size = 0.
 }
 
+/**
+ * Wrap connect, send, receive and close functions.
+ */
+bool CSocketHandler::sendReceive(const uint8_t* const toSend, const size_t size, uint8_t* const response, const size_t resSize)
+{
+	if (!connect())
+	{
+		return false;
+	}
+	if (!send(toSend, size))
+	{
+		return false;
+	}
+	if (!receive(response, resSize))
+	{
+		return false;
+	}
+	close();
+	return true;
+}
+
 void CSocketHandler::convertEndianness(uint8_t* const buffer, const size_t size) const
 {
 	if (size % sizeof(u_long_type) != 0)
