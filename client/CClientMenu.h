@@ -33,10 +33,8 @@ private:
 		MENU_REQ_PENDING_MSG = 40,
 		MENU_SEND_MSG = 50,
 		MENU_REQ_SYM_KEY = 51,
-		MENU_SEND_SYM_KEY = 52
-#ifdef BONUS
-		, MENU_SEND_FILE = 53
-#endif
+		MENU_SEND_SYM_KEY = 52,
+		MENU_SEND_FILE = 53
 	};
 
 	const std::string _welcomeString = "MessageU client at your service.";

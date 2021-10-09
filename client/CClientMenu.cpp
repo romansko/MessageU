@@ -50,9 +50,7 @@ void CClientMenu::display() const
 		<< MENU_SEND_MSG        << ") Send a text message" << std::endl
 		<< MENU_REQ_SYM_KEY     << ") Send a request for symmetric key" << std::endl
 		<< MENU_SEND_SYM_KEY    << ") Send your symmetric key" << std::endl
-#ifdef BONUS
 		<< MENU_SEND_FILE       << ") Send a file" << std::endl
-#endif
 		<< " " << MENU_EXIT     << ") Exit client" << std::endl;
 }
 
@@ -96,9 +94,7 @@ int CClientMenu::readValidateUserChoice() const
 	case MENU_SEND_MSG:
 	case MENU_REQ_SYM_KEY:
 	case MENU_SEND_SYM_KEY:
-#ifdef BONUS
 	case MENU_SEND_FILE:
-#endif
 	{
 		return opt;
 	}
@@ -179,11 +175,11 @@ void CClientMenu::handleUserChoice()
 			// Copy usernames into vector & sort them alphabetically.
 			std::vector<std::string> usernames(_users.size());
 			std::transform(_users.begin(), _users.end(), usernames.begin(),
-				[](std::pair<std::string, std::string> u) {return u.second; });
+				[](const std::pair<std::string, std::string>& u) {return u.second; });
 			std::sort(usernames.begin(), usernames.end());
 			
 			std::cout << "Registered users:" << std::endl;
-			for (auto username : usernames )
+			for (const auto& username : usernames )
 			{
 				std::cout << username << std::endl;
 			}
@@ -215,13 +211,11 @@ void CClientMenu::handleUserChoice()
 		std::cout << "Send your symmetric key" << std::endl;
 		break;
 	}
-#ifdef BONUS
 	case MENU_SEND_FILE:
 	{
 		std::cout << "Register" << std::endl;
 		break;
 	}
-#endif
 	default:  /* Can't happen. Was validated in readValidateUserChoice. */
 	{
 		break;

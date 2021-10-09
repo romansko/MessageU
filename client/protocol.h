@@ -9,12 +9,7 @@
 #include <cstdint>
 
 #define DEF_VAL 0   // Default value used to initialize protocol structures.
-
-#ifdef BONUS
 #define CLIENT_VERSION 2
-#else
-#define CLIENT_VERSION 1
-#endif
 
 constexpr size_t CLIENT_ID_SIZE         = 16;
 constexpr size_t CLIENT_NAME_SIZE       = 255;
@@ -46,10 +41,8 @@ enum EMessageType
 	MSG_INVALID = DEF_VAL,
 	MSG_SYMMETRIC_KEY_REQUEST,   // content invalid. contentSize = 0.
 	MSG_SYMMETRIC_KEY,           // content = symmetric key encrypted by destination client's public key.
-	MSG_ENCRYPTED                // content = encrypted message by symmetric key.
-#ifdef BONUS
-	,MSG_FILE                    // content = encrypted file by symmetric key.
-#endif
+	MSG_ENCRYPTED,                // content = encrypted message by symmetric key.
+	MSG_FILE                    // content = encrypted file by symmetric key.
 };
 
 #pragma pack(push, 1)
