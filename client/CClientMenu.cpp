@@ -168,6 +168,26 @@ void CClientMenu::handleUserChoice()
 	case MENU_REQ_CLIENT_LIST:
 	{
 		std::cout << "Request for client list" << std::endl;
+		if (!_registered)
+		{
+			std::cout << "You must register before requesting clients list!" << std::endl;
+			return;
+		}
+		success = _clientLogic.requestClientsList(_users);
+		if (success)
+		{
+			// Copy usernames into vector & sort them alphabetically.
+			std::vector<std::string> usernames(_users.size());
+			std::transform(_users.begin(), _users.end(), usernames.begin(),
+				[](std::pair<std::string, std::string> u) {return u.second; });
+			std::sort(usernames.begin(), usernames.end());
+			
+			std::cout << "Registered users:" << std::endl;
+			for (auto username : usernames )
+			{
+				std::cout << username << std::endl;
+			}
+		}
 		break;
 	}
 	case MENU_REQ_PUBLIC_KEY:

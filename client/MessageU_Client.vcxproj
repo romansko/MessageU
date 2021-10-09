@@ -164,6 +164,10 @@
     <ClInclude Include="CSocketHandler.h" />
     <ClInclude Include="protocol.h" />
   </ItemGroup>
+  <ItemGroup>
+    <None Include="me.info" />
+    <None Include="server.info" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

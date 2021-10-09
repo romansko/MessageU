@@ -45,6 +45,6 @@ private:
 
 	CClientLogic _clientLogic;
 	bool         _registered;
-
+	std::map<std::string, std::string> _users;
 };
 

@@ -66,4 +66,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <None Include="me.info">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="server.info">
+      <Filter>Resource Files</Filter>
+    </None>
+  </ItemGroup>
 </Project>

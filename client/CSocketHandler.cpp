@@ -211,10 +211,12 @@ bool CSocketHandler::sendReceive(const uint8_t* const toSend, const size_t size,
 	}
 	if (!send(toSend, size))
 	{
+		close();
 		return false;
 	}
 	if (!receive(response, resSize))
 	{
+		close();
 		return false;
 	}
 	close();

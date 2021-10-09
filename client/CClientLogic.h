@@ -23,12 +23,13 @@ public:
 	bool parseServeInfo();
 	bool parseClientInfo();
 	bool registerClient(const std::string& username);
-	bool requestClientsList(bool registered);
+	bool requestClientsList(std::map<std::string,std::string>& users);
 
 private:
 	void clearLastError();
 	bool storeClientInfo();
 	bool validateHeader(const SResponseHeader& header, const EResponseCode expectedCode);
+	bool receiveUnknownPayload(const EResponseCode expectedCode, uint8_t*& payload, size_t& size);
 
 	std::stringstream  _lastError;
 	CFileHandler       _fileHandler;

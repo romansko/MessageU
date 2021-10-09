@@ -235,6 +235,57 @@ bool CClientLogic::validateHeader(const SResponseHeader& header, const EResponse
 	return true;
 }
 
+bool CClientLogic::receiveUnknownPayload(const EResponseCode expectedCode, uint8_t*& payload, size_t& size)
+{
+	SResponseHeader response;
+	uint8_t buffer[PACKET_SIZE];
+	payload = nullptr;
+	size = 0;
+	if (!_socketHandler.receive(buffer, sizeof(buffer)))
+	{
+		clearLastError();
+		_lastError << "Failed receiving response header from server on " << _socketHandler;
+		return false;
+	}
+	memcpy(&response, buffer, sizeof(SResponseHeader));
+	if (!validateHeader(response, expectedCode))
+	{
+		clearLastError();
+		_lastError << "Received unexpected response code from server on  " << _socketHandler;
+		return false;
+	}
+	if (response.payloadSize == 0)
+		return true;  // no payload. but not an error.
+
+	size = response.payloadSize;
+	payload = new uint8_t[size];
+	uint8_t* ptr = static_cast<uint8_t*>(buffer) + sizeof(SResponseHeader);
+	size_t recSize = sizeof(buffer) - sizeof(SResponseHeader);
+	if (recSize > size)
+		recSize = size;
+	memcpy(payload, ptr, recSize);
+	ptr = payload + recSize;
+	while(recSize < size)
+	{
+		size_t toRead = (size - recSize);
+		if (toRead > PACKET_SIZE)
+			toRead = PACKET_SIZE;
+		if (!_socketHandler.receive(buffer, toRead))
+		{
+			clearLastError();
+			_lastError << "Failed receiving payload data from server on " << _socketHandler;
+			delete[] payload;
+			payload = nullptr;
+			size = 0;
+			return false;
+		}
+		memcpy(ptr, buffer, toRead);
+		recSize += toRead;
+		ptr += toRead;
+	}
+	
+	return true;
+}
 
 
 /**
@@ -303,18 +354,64 @@ bool CClientLogic::registerClient(const std::string& username)
 	return true;
 }
 
-bool CClientLogic::requestClientsList(bool registered)
+bool CClientLogic::requestClientsList(std::map<std::string, std::string>& users)
 {
 	SRequestHeader request;
+	SResponseHeader response;
+	uint8_t* payload = nullptr;
+	size_t payloadSize = 0;
 	
-	if (!registered)
-	{
-		// todo do not allow
-	}
-
 	request.code = REQUEST_USERS;
 	memcpy(request.clientID.uuid, _uuid.uuid, sizeof(request.clientID.uuid));
-	
-
+	if (!_socketHandler.connect())
+	{
+		clearLastError();
+		_lastError << "Failed connecting to server on " << _socketHandler;
+		return false;
+	}
+	if (!_socketHandler.send(reinterpret_cast<const uint8_t*>(&request), sizeof(request)))
+	{
+		_socketHandler.close();
+		clearLastError();
+		_lastError << "Failed sending clients list request to server on " << _socketHandler;
+		return false;
+	}
+	if (!receiveUnknownPayload(RESPONSE_USERS,payload, payloadSize))
+	{
+		_socketHandler.close();
+		_lastError << " (Clients list request).";
+		return false;
+	}
+	if (payloadSize == 0)
+	{
+		_socketHandler.close();
+		clearLastError();
+		_lastError << "Server has no users registered. Empty Clients list.";
+		return false;
+	}
+	if (payloadSize % sizeof(SClient) != 0)
+	{
+		_socketHandler.close();
+		clearLastError();
+		_lastError << "Clients list received is corrupted! (Invalid size).";
+		delete[] payload;
+		return false;
+	}
+	_socketHandler.close();
+	uint8_t* ptr = payload;
+	size_t parsedBytes = 0;
+	SClient client;
+	users.clear();
+	while (parsedBytes < payloadSize)
+	{
+		memcpy(&client, ptr, sizeof(SClient));
+		ptr += sizeof(SClient);
+		parsedBytes += sizeof(SClient);
+		client.name[sizeof(client.name) - 1] = '\0'; // just in case..
+		const std::string name = reinterpret_cast<char*>(client.name);
+		const std::string clientID = hexify(client.clientId.uuid, sizeof(client.clientId.uuid));
+		users.insert(std::pair<std::string, std::string>(clientID, name));
+	}
+	delete[] payload;
 	return true;
 }

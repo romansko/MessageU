@@ -15,6 +15,7 @@ import database
 import protocol
 from datetime import datetime
 
+
 class Server:
     VERSION = 2
     DATABASE = 'server.db'
@@ -51,8 +52,8 @@ class Server:
             if requestHeader.code in self.requestHandle.keys():
                 success = self.requestHandle[requestHeader.code](conn, data)
             if not success:  # generic error
-                responseHeader = protocol.ResponseHeader(Server.VERSION)
-                responseHeader.code = protocol.EResponseCode.RESPONSE_ERROR.value
+                responseHeader = protocol.ResponseHeader(Server.VERSION,
+                                                         protocol.EResponseCode.RESPONSE_ERROR.value)
                 self.write(conn, responseHeader.pack())
 
         self.sel.unregister(conn)
@@ -61,14 +62,21 @@ class Server:
     def write(self, conn, data):
         """ make sure packet sent is sized """
         size = len(data)
-        if size < Server.PACKET_SIZE:
-            data += bytearray(Server.PACKET_SIZE - size)  # append to PACKET_SIZE bytes
-        elif size > Server.PACKET_SIZE:
-            data = data[:Server.PACKET_SIZE]
-        try:
-            conn.send(data)
-        except:
-            logging.error("Failed to send data to " + conn)
+        sent = 0
+        while sent < size:
+            leftover = size - sent
+            if leftover > Server.PACKET_SIZE:
+                leftover = Server.PACKET_SIZE
+            toSend = data[sent:sent+leftover]
+            if len(toSend) < Server.PACKET_SIZE:
+                toSend += bytearray(Server.PACKET_SIZE - len(toSend))
+            try:
+                conn.send(toSend)
+                sent += len(toSend)
+            except:
+                logging.error("Failed to send data to " + conn)
+                return
+
 
     def start(self):
         """ Start listen for connections. Contains the main loop. """
@@ -103,7 +111,7 @@ class Server:
             if not request.name.isalnum():
                 logging.info(f"Registration Request: Invalid requested username ({request.name}))")
                 return False
-            if self.database.clientExists(request.name):
+            if self.database.clientUsernameExists(request.name):
                 logging.info(f"Registration Request: Username ({request.name}) already exists.")
                 return False
         except:
@@ -118,8 +126,27 @@ class Server:
         self.write(conn, response.pack())
         return True
 
-
     def handleUsersListRequest(self, conn, data):
+        request = protocol.RequestHeader()
+        if not request.unpack(data):
+            logging.error("Failed to parse request header!")
+        try:
+            if not self.database.clientIdExists(request.clientID):
+                logging.info(f"Users list Request: clientID ({request.clientID}) does not exists!")
+                return False
+        except:
+            logging.error("Users list Request:: Failed to connect to database.")
+            return False
+        response = protocol.ResponseHeader(Server.VERSION, protocol.EResponseCode.RESPONSE_USERS.value)
+        clients = self.database.getClientsList()
+        payload = b""
+        for user in clients:
+            if user[0] != request.clientID:  # do not send self
+                payload += user[0]
+                name = user[1] + bytes('\0'*(protocol.CLIENT_NAME_SIZE - len(user[1])), 'utf-8')
+                payload += name
+        response.payloadSize = len(payload)
+        self.write(conn, response.pack() + payload)
         return True
 
     def handlePublicKeyRequest(self, conn, data):

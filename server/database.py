@@ -60,12 +60,21 @@ class Database:
         except:
             return False
 
-    def clientExists(self, username):
+    def clientUsernameExists(self, username):
         """ Check whether a username already exists within database """
         conn = self.connect()
         cur = conn.cursor()
         cur.execute(f"SELECT * FROM {Database.CLIENTS} WHERE Name = ?", [username])
-        exists = cur.rowcount > 0
+        exists = len(cur.fetchall()) > 0
+        conn.close()
+        return exists
+
+    def clientIdExists(self, id):
+        """ Check whether an client ID already exists within database """
+        conn = self.connect()
+        cur = conn.cursor()
+        cur.execute(f"SELECT * FROM {Database.CLIENTS} WHERE ID = ?", [id])
+        exists = len(cur.fetchall()) > 0
         conn.close()
         return exists
 
@@ -85,3 +94,10 @@ class Database:
         except Exception as e:
             return False
 
+    def getClientsList(self):
+        conn = self.connect()
+        cur = conn.cursor()
+        cur.execute(f"SELECT ID, Name FROM {Database.CLIENTS}")
+        clients = cur.fetchall()
+        conn.close()
+        return clients

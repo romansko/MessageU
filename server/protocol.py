@@ -64,9 +64,9 @@ class RequestHeader:
 
 
 class ResponseHeader:
-    def __init__(self, version):
+    def __init__(self, version, code):
         self.version = version      # 1 byte
-        self.code = DEF_VAL         # 2 bytes
+        self.code = code            # 2 bytes
         self.payloadSize = DEF_VAL  # 4 bytes
         self.size = HEADER_SIZE
 
@@ -101,8 +101,7 @@ class RegistrationRequest:
 
 class RegistrationResponse:
     def __init__(self, version):
-        self.header = ResponseHeader(version)
-        self.header.code = EResponseCode.RESPONSE_REGISTRATION.value
+        self.header = ResponseHeader(version, EResponseCode.RESPONSE_REGISTRATION.value)
         self.clientID = b""
 
     def pack(self):
