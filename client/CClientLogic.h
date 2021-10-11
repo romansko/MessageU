@@ -17,13 +17,24 @@ public:
 	CClientLogic(CClientLogic&& other) noexcept = delete;
 	CClientLogic& operator=(const CClientLogic& other) = delete;
 	CClientLogic& operator=(CClientLogic&& other) noexcept = delete;
+
+	// static functions
+	static std::string hexify(const uint8_t* buffer, const size_t size);
+	static bool unhexify(const std::string& hexString, uint8_t* const buffer, const size_t size);
 	
-	std::string getLastError() const;
-	static std::string hexify(const uint8_t* buffer, size_t length);
+	// inline getters
+	std::string getLastError() const { return _lastError.str(); }
+	std::string getSelfUsername()  const { return _username; }
+	SClientID   getSelfClientID()  const { return _clientID; }
+	
+	// client logic to be invoked by client menu.
 	bool parseServeInfo();
 	bool parseClientInfo();
+	std::string getUserID(const std::string& username) const;
+	std::vector<std::string> getUsernames() const;
 	bool registerClient(const std::string& username);
-	bool requestClientsList(std::map<std::string,std::string>& users);
+	bool requestClientsList();
+	bool requestClientPublicKey(const std::string& username, std::string& publicKey);
 
 private:
 	void clearLastError();
@@ -31,13 +42,13 @@ private:
 	bool validateHeader(const SResponseHeader& header, const EResponseCode expectedCode);
 	bool receiveUnknownPayload(const EResponseCode expectedCode, uint8_t*& payload, size_t& size);
 
+	
+	std::map<std::string /*clientID*/, std::string /*username*/> _usersList;  // updates only upon user request.
 	std::stringstream  _lastError;
 	CFileHandler       _fileHandler;
 	CSocketHandler     _socketHandler;
 	RSAPrivateWrapper* _rsaDecryptor;
 	std::string        _username;
-	SClientID          _uuid;
+	SClientID          _clientID;
 
-public:
-	
 };

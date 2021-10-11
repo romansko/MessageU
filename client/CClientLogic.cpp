@@ -14,21 +14,33 @@ CClientLogic::~CClientLogic()
 	delete _rsaDecryptor;
 }
 
-
-std::string CClientLogic::getLastError() const
-{
-	return _lastError.str();
-}
-
-std::string CClientLogic::hexify(const uint8_t* buffer, size_t length)
+std::string CClientLogic::hexify(const uint8_t* buffer, const size_t size)
 {
 	std::stringstream hexified;
 	const std::ios::fmtflags f(std::cout.flags());
 	hexified << std::hex;
-	for (size_t i = 0; i < length; ++i)
+	for (size_t i = 0; i < size; ++i)
 		hexified << std::setfill('0') << std::setw(2) << (0xFF & buffer[i]);
 	hexified.flags(f);
 	return hexified.str();
+}
+
+bool CClientLogic::unhexify(const std::string& hexString, uint8_t* const buffer, const size_t size)
+{
+	if ((hexString.length() / 2) != size)  // Each byte is represented by two ASCII chars.
+		return false;
+	try
+	{
+		for (size_t i = 0; i < size; ++i)
+		{
+			buffer[i] = static_cast<uint8_t>(std::stoi(hexString.substr(i * 2, 2), nullptr, 16));
+		}
+	}
+	catch (...)
+	{
+		return false;
+	}
+	return true;
 }
 
 /**
@@ -103,23 +115,16 @@ bool CClientLogic::parseClientInfo()
 		_lastError << "Couldn't read client's UUID from " << CLIENT_INFO;
 		return false;
 	}
-
-	try
+	if (!unhexify(line, _clientID.uuid, sizeof(_clientID.uuid)))
 	{
-		for (size_t i = 0; i < sizeof(_uuid.uuid); ++i)
-		{
-			_uuid.uuid[i] = static_cast<uint8_t>(std::stoi(line.substr(i * 2, 2), nullptr, 16));
-		}
-	}
-	catch(...)
-	{
+		memset(_clientID.uuid, 0, sizeof(_clientID.uuid));
 		clearLastError();
 		_lastError << "Couldn't parse client's UUID from " << CLIENT_INFO;
 		return false;
 	}
 
 	// Read & Parse Client's private key.
-	std::string decodedKey = "";
+	std::string decodedKey;
 	while (_fileHandler.readLine(line))
 	{
 		decodedKey.append(Base64Wrapper::decode(line));
@@ -142,6 +147,30 @@ bool CClientLogic::parseClientInfo()
 	}
 	_fileHandler.close();
 	return true;
+}
+
+std::string CClientLogic::getUserID(const std::string& username) const
+{
+	if (username == _username)
+		return hexify(_clientID.uuid, sizeof(_clientID.uuid));
+	const auto it = std::find_if(_usersList.begin(), _usersList.end(),
+		[&username](const std::pair<std::string, std::string>& client) {
+			return (client.second == username);
+		});
+	return (it == _usersList.end()) ? "" : it->first;
+}
+
+/**
+ * Copy usernames into vector & sort them alphabetically.
+ * If _usersList is empty, an empty vector will be returned.
+ */
+std::vector<std::string> CClientLogic::getUsernames() const
+{
+	std::vector<std::string> usernames(_usersList.size());
+	std::transform(_usersList.begin(), _usersList.end(), usernames.begin(),
+		[](const std::pair<std::string, std::string>& client) { return client.second; });
+	std::sort(usernames.begin(), usernames.end());
+	return usernames;
 }
 
 /**
@@ -174,7 +203,7 @@ bool CClientLogic::storeClientInfo()
 	}
 
 	// Write UUID.
-	const auto hexifiedUUID = hexify(_uuid.uuid, sizeof(_uuid.uuid));
+	const auto hexifiedUUID = hexify(_clientID.uuid, sizeof(_clientID.uuid));
 	if (!_fileHandler.writeLine(hexifiedUUID))
 	{
 		clearLastError();
@@ -197,8 +226,6 @@ bool CClientLogic::storeClientInfo()
 
 bool CClientLogic::validateHeader(const SResponseHeader& header, const EResponseCode expectedCode)
 {
-	// todo: version validation ?
-
 	if (header.code == RESPONSE_ERROR)
 	{
 		clearLastError();
@@ -217,7 +244,17 @@ bool CClientLogic::validateHeader(const SResponseHeader& header, const EResponse
 	{
 	case RESPONSE_REGISTRATION:
 	{
-		if (header.payloadSize != sizeof(SClientID))
+		if (header.payloadSize != (sizeof(SResponseRegistration) - sizeof(SResponseHeader)))
+		{
+			clearLastError();
+			_lastError << "Unexpected payload size " << header.payloadSize << ". Expected size was " << sizeof(SClientID);
+			return false;
+		}
+		break;
+	}
+	case RESPONSE_PUBLIC_KEY:
+	{
+		if (header.payloadSize != (sizeof(SResponsePublicKey) - sizeof(SResponseHeader)))
 		{
 			clearLastError();
 			_lastError << "Unexpected payload size " << header.payloadSize << ". Expected size was " << sizeof(SClientID);
@@ -293,8 +330,8 @@ bool CClientLogic::receiveUnknownPayload(const EResponseCode expectedCode, uint8
  */
 bool CClientLogic::registerClient(const std::string& username)
 {
-	SRegistrationRequest  request;
-	SRegistrationResponse response;
+	SRequestRegistration  request;
+	SResponseRegistration response;
 
 	if (username.length() >= CLIENT_NAME_SIZE)  // >= because of null termination.
 	{
@@ -325,8 +362,8 @@ bool CClientLogic::registerClient(const std::string& username)
 	// fill request data
 	request.header.code = REQUEST_REGISTRATION;
 	request.header.payloadSize = sizeof(request.payload);
-	memcpy(request.payload.name, username.c_str(), username.length());
-	memcpy(request.payload.publicKey, publicKey.c_str(), sizeof(request.payload.publicKey));
+	memcpy(request.payload.clientName.name, username.c_str(), username.length());
+	memcpy(request.payload.clientPublicKey.publicKey, publicKey.c_str(), sizeof(request.payload.clientPublicKey.publicKey));
 
 	if (!_socketHandler.sendReceive(reinterpret_cast<const uint8_t* const>(&request), sizeof(request),
 		reinterpret_cast<uint8_t* const>(&response), sizeof(response)))
@@ -336,12 +373,12 @@ bool CClientLogic::registerClient(const std::string& username)
 		return false;
 	}
 
-	// parse and validate SRegistrationResponse
+	// parse and validate SResponseRegistration
 	if (!validateHeader(response.header, RESPONSE_REGISTRATION))
 		return false;  // error message updated within.
 
 	// store received client's ID
-	_uuid = response.clientID;
+	_clientID = response.payload;
 	_username = username;
 	if (!storeClientInfo())
 	{
@@ -354,7 +391,7 @@ bool CClientLogic::registerClient(const std::string& username)
 	return true;
 }
 
-bool CClientLogic::requestClientsList(std::map<std::string, std::string>& users)
+bool CClientLogic::requestClientsList()
 {
 	SRequestHeader request;
 	SResponseHeader response;
@@ -362,7 +399,7 @@ bool CClientLogic::requestClientsList(std::map<std::string, std::string>& users)
 	size_t payloadSize = 0;
 	
 	request.code = REQUEST_USERS;
-	memcpy(request.clientID.uuid, _uuid.uuid, sizeof(request.clientID.uuid));
+	request.clientID = _clientID;
 	if (!_socketHandler.connect())
 	{
 		clearLastError();
@@ -389,7 +426,7 @@ bool CClientLogic::requestClientsList(std::map<std::string, std::string>& users)
 		_lastError << "Server has no users registered. Empty Clients list.";
 		return false;
 	}
-	if (payloadSize % sizeof(SClient) != 0)
+	if (payloadSize % sizeof(SClientIDName) != 0)
 	{
 		_socketHandler.close();
 		clearLastError();
@@ -400,18 +437,64 @@ bool CClientLogic::requestClientsList(std::map<std::string, std::string>& users)
 	_socketHandler.close();
 	uint8_t* ptr = payload;
 	size_t parsedBytes = 0;
-	SClient client;
-	users.clear();
+	SClientIDName client;
+	_usersList.clear();
 	while (parsedBytes < payloadSize)
 	{
-		memcpy(&client, ptr, sizeof(SClient));
-		ptr += sizeof(SClient);
-		parsedBytes += sizeof(SClient);
-		client.name[sizeof(client.name) - 1] = '\0'; // just in case..
-		const std::string name = reinterpret_cast<char*>(client.name);
+		memcpy(&client, ptr, sizeof(SClientIDName));
+		ptr += sizeof(SClientIDName);
+		parsedBytes += sizeof(SClientIDName);
+		client.clientName.name[sizeof(client.clientName.name) - 1] = '\0'; // just in case..
+		const std::string name = reinterpret_cast<char*>(client.clientName.name);
 		const std::string clientID = hexify(client.clientId.uuid, sizeof(client.clientId.uuid));
-		users.insert(std::pair<std::string, std::string>(clientID, name));
+		_usersList.insert(std::pair<std::string, std::string>(clientID, name));
 	}
 	delete[] payload;
+	return true;
+}
+
+bool CClientLogic::requestClientPublicKey(const std::string& username, std::string& publicKey)
+{
+	publicKey = "";
+	const std::string userID = getUserID(username);
+	if (userID.empty())
+	{
+		clearLastError();
+		_lastError << "username '" << username << "' doesn't exist. Please check your input or try to request users list again.";
+		return false;
+	}
+
+	SRequestPublicKey  request;
+	SResponsePublicKey response;
+	request.header.code = REQUEST_PUBLIC_KEY;
+	request.header.clientID = _clientID;
+	if (!unhexify(userID, request.payload.uuid, sizeof(request.payload.uuid)))
+	{
+		clearLastError();
+		_lastError << "Invalid userID: " << userID;
+		return false;
+	}
+
+	if (!_socketHandler.sendReceive(reinterpret_cast<const uint8_t* const>(&request), sizeof(request),
+		reinterpret_cast<uint8_t* const>(&response), sizeof(response)))
+	{
+		clearLastError();
+		_lastError << "Failed communicating with server on " << _socketHandler;
+		return false;
+	}
+
+	// parse and validate SResponseRegistration
+	if (!validateHeader(response.header, RESPONSE_PUBLIC_KEY))
+		return false;  // error message updated within.
+
+	if (request.payload != response.payload.clientId)
+	{
+		clearLastError();
+		_lastError << "Unexpected clientID was received.";
+		return false;
+	}
+
+	publicKey = hexify(response.payload.clientPublicKey.publicKey, sizeof(response.payload.clientPublicKey.publicKey));
+	
 	return true;
 }

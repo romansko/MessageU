@@ -9,8 +9,7 @@
 #include <cstdint>
 
 #define DEF_VAL 0   // Default value used to initialize protocol structures.
-#define CLIENT_VERSION 2
-
+constexpr uint8_t CLIENT_VERSION        = 2;
 constexpr size_t CLIENT_ID_SIZE         = 16;
 constexpr size_t CLIENT_NAME_SIZE       = 255;
 constexpr size_t CLIENT_PUBLIC_KEY_SIZE = 160;
@@ -51,6 +50,48 @@ struct SClientID
 {
 	uint8_t uuid[CLIENT_ID_SIZE];
 	SClientID(): uuid{DEF_VAL} {}
+
+	bool operator==(SClientID& otherID)
+	{
+		for (size_t i = 0; i < CLIENT_ID_SIZE; ++i)
+			if (uuid[i] != otherID.uuid[i])
+				return false;
+		return true;
+	}
+	bool operator!=(SClientID& otherID)
+	{
+		return !(*this == otherID);
+	}
+};
+
+struct SClientName
+{
+	uint8_t name[CLIENT_NAME_SIZE];  // DEF_VAL terminated.
+	SClientName(): name{ '\0' } {}
+};
+
+struct SPublicKey
+{
+	uint8_t publicKey[CLIENT_PUBLIC_KEY_SIZE];
+	SPublicKey(): publicKey{ DEF_VAL } {}
+};
+
+struct SClientIDName
+{
+	SClientID   clientId;
+	SClientName clientName;
+};
+
+struct SClientIDPublicKey
+{
+	SClientID   clientId;
+	SPublicKey  clientPublicKey;
+};
+
+struct SClientNamePublicKey
+{
+	SClientName clientName;
+	SPublicKey  clientPublicKey;
 };
 
 struct SRequestHeader
@@ -70,43 +111,28 @@ struct SResponseHeader
 	SResponseHeader(): version(DEF_VAL), code(DEF_VAL), payloadSize(DEF_VAL) {}
 };
 
-struct SRegistrationRequest
+struct SRequestRegistration
 {
-	SRequestHeader header;
-	struct SRegistrationPayload
-	{
-		uint8_t name[CLIENT_NAME_SIZE];  // DEF_VAL terminated.
-		uint8_t publicKey[CLIENT_PUBLIC_KEY_SIZE];
-		SRegistrationPayload() : name{ '\0' }, publicKey{ DEF_VAL } {}
-	}payload;
+	SRequestHeader       header;
+	SClientNamePublicKey payload;
 };
 
-struct SRegistrationResponse
+struct SResponseRegistration
 {
 	SResponseHeader header;
-	SClientID       clientID;
+	SClientID       payload;
 };
 
-struct SPayloadMessage
+struct SRequestPublicKey
 {
-	SClientID clientID;  // destination client's ID.
-	uint8_t   messageType;
-	uint32_t  contentSize;
-	SPayloadMessage(): messageType(DEF_VAL), contentSize(DEF_VAL) {}
+	SRequestHeader header;
+	SClientID      payload;
 };
 
-struct SClient
+struct SResponsePublicKey
 {
-	SClientID clientId;
-	uint8_t   name[CLIENT_NAME_SIZE];  // DEF_VAL terminated.
-	SClient(): name{'\0'} {}
-};
-
-struct SPayloadPublicKey
-{
-	SClientID clientId;
-	uint8_t   publicKey[CLIENT_PUBLIC_KEY_SIZE];
-	SPayloadPublicKey(): publicKey{DEF_VAL} {}
+	SResponseHeader    header;
+	SClientIDPublicKey payload;
 };
 
 struct SMessageSent

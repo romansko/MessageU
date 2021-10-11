@@ -81,7 +81,7 @@ bool CSocketHandler::isValidPort(const std::string& port)
 		const int p = std::stoi(port);
 		return (p != 0);  // port 0 is invalid..
 	}
-	catch (...)
+	catch(...)
 	{
 		return false;
 	}
@@ -101,7 +101,7 @@ bool CSocketHandler::connect()
 		_socket->non_blocking(false);  // blocking socket..
 		return true;
 	}
-	catch (...)
+	catch(...)
 	{
 		return false;
 	}
@@ -114,7 +114,7 @@ void CSocketHandler::close()
 		if (_socket != nullptr)
 			_socket->close();
 	}
-	catch (...)
+	catch(...)
 	{
 		/* Do Nothing */
 	}
@@ -138,7 +138,7 @@ bool CSocketHandler::receive(uint8_t(&buffer)[PACKET_SIZE]) const
 		
 		return true;
 	}
-	catch(boost::system::system_error&)
+	catch(...)
 	{
 		return false;
 	}
@@ -176,9 +176,8 @@ bool CSocketHandler::send(uint8_t(&buffer)[PACKET_SIZE]) const
 		(void) write(*_socket, boost::asio::buffer(buffer, PACKET_SIZE));
 		return true;
 	}
-	catch (boost::system::system_error& e)
+	catch(...)
 	{
-		std::cout << e.what() << std::endl;
 		return false;
 	}
 }

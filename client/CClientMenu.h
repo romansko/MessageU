@@ -12,16 +12,15 @@ class CClientMenu
 {
 public:
 	CClientMenu();
-	~CClientMenu();
 	void initialize();
 	void display() const;
 	void handleUserChoice();
 
 private:
-	void clientStop(std::string error);
+	void clientStop(const std::string& error);
 	void clearMenu() const;
 	int readValidateUserChoice() const;
-	std::string readUserInput() const;
+	std::string readUserInput(const std::string& description = "") const;
 
 	const int INVALID_CHOICE = -1;
 	enum EOptions
@@ -43,6 +42,5 @@ private:
 
 	CClientLogic _clientLogic;
 	bool         _registered;
-	std::map<std::string, std::string> _users;
 };
 

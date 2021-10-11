@@ -14,12 +14,8 @@ CClientMenu::CClientMenu() : _registered(false)
 {
 }
 
-CClientMenu::~CClientMenu()
-{
-}
 
-
-void CClientMenu::clientStop(std::string error)
+void CClientMenu::clientStop(const std::string& error)
 {
 	std::cout << "Fatal Error: " << error << std::endl << "Client will stop." << std::endl;
 	exit(1);
@@ -42,6 +38,8 @@ void CClientMenu::initialize()
 void CClientMenu::display() const
 {
 	clearMenu();
+	if (_registered && !_clientLogic.getSelfUsername().empty())
+		std::cout << "Hello " << _clientLogic.getSelfUsername() << ", ";
 	std::cout << _welcomeString << std::endl << std::endl
 		<< MENU_REGISTER        << ") Register" << std::endl
 		<< MENU_REQ_CLIENT_LIST << ") Request for client list" << std::endl
@@ -109,9 +107,11 @@ int CClientMenu::readValidateUserChoice() const
 /**
  * Read input from console.
  */
-std::string CClientMenu::readUserInput() const
+std::string CClientMenu::readUserInput(const std::string& description) const
 {
 	std::string input;
+	if (!description.empty())
+		std::cout << description << std::endl;
 	do
 	{
 		std::getline(std::cin, input);
@@ -120,6 +120,8 @@ std::string CClientMenu::readUserInput() const
 
 	return input;
 }
+
+
 
 /**
  * Invoke matching function to user's choice. User's choice is validated.
@@ -151,8 +153,7 @@ void CClientMenu::handleUserChoice()
 			std::cout << "You have already registered!" << std::endl;
 			return;
 		}
-		std::cout << "Please type your username.." << std::endl;
-		const auto username = readUserInput();
+		const auto username = readUserInput("Please type your username..");
 		success = _clientLogic.registerClient(username);
 		if (success)
 		{
@@ -169,14 +170,16 @@ void CClientMenu::handleUserChoice()
 			std::cout << "You must register before requesting clients list!" << std::endl;
 			return;
 		}
-		success = _clientLogic.requestClientsList(_users);
+		success = _clientLogic.requestClientsList();
 		if (success)
 		{
 			// Copy usernames into vector & sort them alphabetically.
-			std::vector<std::string> usernames(_users.size());
-			std::transform(_users.begin(), _users.end(), usernames.begin(),
-				[](const std::pair<std::string, std::string>& u) {return u.second; });
-			std::sort(usernames.begin(), usernames.end());
+			std::vector<std::string> usernames = _clientLogic.getUsernames();
+			if (usernames.empty())
+			{
+				std::cout << "Server has no users registered." << std::endl;
+				return;
+			}
 			
 			std::cout << "Registered users:" << std::endl;
 			for (const auto& username : usernames )
@@ -189,6 +192,26 @@ void CClientMenu::handleUserChoice()
 	case MENU_REQ_PUBLIC_KEY:
 	{
 		std::cout << "Request for public key" << std::endl;
+		if (!_registered)
+		{
+			std::cout << "You must register before requesting clients list!" << std::endl;
+			return;
+		}
+		const auto username = readUserInput("Please type a username..");
+		std::string hexifiedKey;
+		success = _clientLogic.requestClientPublicKey(username, hexifiedKey);
+		if (success)
+		{
+			if (username == _clientLogic.getSelfUsername())
+			{
+				std::cout << _clientLogic.getSelfUsername() << ", your key is: " << std::endl;
+			}
+			else
+			{
+				std::cout << username << "'s public key is " << std::endl;
+			}
+			std::cout << hexifiedKey << std::endl;
+		}
 		break;
 	}
 	case MENU_REQ_PENDING_MSG:
@@ -213,7 +236,7 @@ void CClientMenu::handleUserChoice()
 	}
 	case MENU_SEND_FILE:
 	{
-		std::cout << "Register" << std::endl;
+		std::cout << "File Send" << std::endl;
 		break;
 	}
 	default:  /* Can't happen. Was validated in readValidateUserChoice. */

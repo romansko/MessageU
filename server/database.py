@@ -4,7 +4,6 @@ database.py: handles server's database.
 """
 __author__ = "Roman Koifman"
 
-
 import sqlite3
 import client
 import message
@@ -95,9 +94,23 @@ class Database:
             return False
 
     def getClientsList(self):
-        conn = self.connect()
-        cur = conn.cursor()
-        cur.execute(f"SELECT ID, Name FROM {Database.CLIENTS}")
-        clients = cur.fetchall()
-        conn.close()
-        return clients
+        try:
+            conn = self.connect()
+            cur = conn.cursor()
+            cur.execute(f"SELECT ID, Name FROM {Database.CLIENTS}")
+            clients = cur.fetchall()
+            conn.close()
+            return clients
+        except:
+            return []
+
+    def getClientPublicKey(self, client_id):
+        try:
+            conn = self.connect()
+            cur = conn.cursor()
+            cur.execute(f"SELECT PublicKey FROM {Database.CLIENTS} WHERE ID = ?", [client_id])
+            key = cur.fetchall()[0][0]
+            conn.close()
+            return key
+        except:
+            return []

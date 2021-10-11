@@ -141,7 +141,7 @@ class Server:
         clients = self.database.getClientsList()
         payload = b""
         for user in clients:
-            if user[0] != request.clientID:  # do not send self
+            if user[0] != request.clientID:  # Do not send self. Requirement.
                 payload += user[0]
                 name = user[1] + bytes('\0'*(protocol.CLIENT_NAME_SIZE - len(user[1])), 'utf-8')
                 payload += name
@@ -150,10 +150,22 @@ class Server:
         return True
 
     def handlePublicKeyRequest(self, conn, data):
+        request = protocol.PublicKeyRequest()
+        response = protocol.PublicKeyResponse(Server.VERSION)
+        if not request.unpack(data):
+            logging.error("Failed to parse request header!")
+        key = self.database.getClientPublicKey(request.clientID)
+        if not key:
+            logging.info(f"PublicKey Request: clientID doesn't exists.")
+            return False
+        response.clientID = request.clientID
+        response.publicKey = key
+        response.header.payloadSize = protocol.CLIENT_ID_SIZE + protocol.CLIENT_PUBLIC_KEY_SIZE
+        self.write(conn, response.pack())
         return True
 
     def handleMessageSendRequest(self, conn, data):
-        return True
+        return False
 
     def handlePendingMessagesRequest(self, conn, data):
-        return True
+        return False

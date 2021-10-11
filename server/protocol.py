@@ -113,3 +113,34 @@ class RegistrationResponse:
             return b""
 
 
+class PublicKeyRequest:
+    def __init__(self):
+        self.header = RequestHeader()
+        self.clientID = b""
+
+    def unpack(self, data):
+        if not self.header.unpack(data):
+            return False
+        try:
+            clientID = data[self.header.size:self.header.size + CLIENT_ID_SIZE]
+            self.clientID = struct.unpack(f"<{CLIENT_ID_SIZE}s", clientID)[0]
+            return True
+        except:
+            self.clientID = b""
+            return False
+
+
+class PublicKeyResponse:
+    def __init__(self, version):
+        self.header = ResponseHeader(version, EResponseCode.RESPONSE_PUBLIC_KEY.value)
+        self.clientID = b""
+        self.publicKey = b""
+
+    def pack(self):
+        try:
+            data = self.header.pack()
+            data += struct.pack(f"<{CLIENT_ID_SIZE}s", self.clientID)
+            data += struct.pack(f"<{CLIENT_PUBLIC_KEY_SIZE}s", self.publicKey)
+            return data
+        except:
+            return b""
