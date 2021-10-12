@@ -167,7 +167,7 @@ bool CClientLogic::parseClientInfo()
 	return true;
 }
 
-std::string CClientLogic::getUserID(const std::string& username) const
+std::string CClientLogic::getClientId(const std::string& username) const
 {
 	if (username == _username)
 		return hex(_clientID.uuid, sizeof(_clientID.uuid));
@@ -176,6 +176,19 @@ std::string CClientLogic::getUserID(const std::string& username) const
 			return (client.second == username);
 		});
 	return (it == _usersList.end()) ? "" : it->first;
+}
+
+bool CClientLogic::getClientId(const std::string& username, SClientID& clientId) const
+{
+	std::string userID = getClientId(username);
+	if (userID.empty())
+		return false;
+	userID = unhex(userID);
+	const char* unhexed = userID.c_str();
+	if (strlen(unhexed) != sizeof(clientId.uuid))
+		return false;
+	memcpy(clientId.uuid, unhexed, sizeof(clientId.uuid));
+	return true;
 }
 
 /**
@@ -258,35 +271,37 @@ bool CClientLogic::validateHeader(const SResponseHeader& header, const EResponse
 		return false;
 	}
 
+	csize_t expectedSize = DEF_VAL;
 	switch (header.code)
 	{
 	case RESPONSE_REGISTRATION:
 	{
-		if (header.payloadSize != (sizeof(SResponseRegistration) - sizeof(SResponseHeader)))
-		{
-			clearLastError();
-			_lastError << "Unexpected payload size " << header.payloadSize << ". Expected size was " << sizeof(SClientID);
-			return false;
-		}
+		expectedSize = sizeof(SResponseRegistration) - sizeof(SResponseHeader);
 		break;
 	}
 	case RESPONSE_PUBLIC_KEY:
 	{
-		if (header.payloadSize != (sizeof(SResponsePublicKey) - sizeof(SResponseHeader)))
-		{
-			clearLastError();
-			_lastError << "Unexpected payload size " << header.payloadSize << ". Expected size was " << sizeof(SClientID);
-			return false;
-		}
+		expectedSize = sizeof(SResponsePublicKey) - sizeof(SResponseHeader);
+		break;
+	}
+	case RESPONSE_MSG_SENT:
+	{
+		expectedSize = sizeof(SResponseMessageSent) - sizeof(SResponseHeader);
 		break;
 	}
 	default:
 	{
-		break;
+		return true;  // variable payload size. 
 	}
 	}
 
-
+	if (header.payloadSize != expectedSize)
+	{
+		clearLastError();
+		_lastError << "Unexpected payload size " << header.payloadSize << ". Expected size was " << expectedSize;
+		return false;
+	}
+	
 	return true;
 }
 
@@ -470,27 +485,17 @@ bool CClientLogic::requestClientsList()
 
 bool CClientLogic::requestClientPublicKey(const std::string& username, std::string& publicKey)
 {
+	SRequestPublicKey  request;
+	SResponsePublicKey response;
+	request.header.clientId = _clientID;
 	publicKey = "";
-	std::string userID = getUserID(username);
-	if (userID.empty())
+	
+	if (!getClientId(username, request.payload))
 	{
 		clearLastError();
 		_lastError << "username '" << username << "' doesn't exist. Please check your input or try to request users list again.";
 		return false;
 	}
-
-	SRequestPublicKey  request;
-	SResponsePublicKey response;
-	request.header.clientId = _clientID;
-	userID = unhex(userID);
-	const char* unhexed = userID.c_str();
-	if (strlen(unhexed) != sizeof(request.payload.uuid))
-	{
-		clearLastError();
-		_lastError << "Invalid userID: " << userID;
-		return false;
-	}
-	memcpy(request.payload.uuid, unhexed, sizeof(request.payload.uuid));
 
 	if (!_socketHandler.sendReceive(reinterpret_cast<const uint8_t* const>(&request), sizeof(request),
 		reinterpret_cast<uint8_t* const>(&response), sizeof(response)))
@@ -510,8 +515,45 @@ bool CClientLogic::requestClientPublicKey(const std::string& username, std::stri
 		_lastError << "Unexpected clientID was received.";
 		return false;
 	}
-
+	
 	publicKey = hex(response.payload.clientPublicKey.publicKey, sizeof(response.payload.clientPublicKey.publicKey));
+	return true;
+}
+
+bool CClientLogic::requestSymmetricKey(const std::string& username)
+{
+	SRequestSendMessage  request(MSG_SYMMETRIC_KEY);
+	SResponseMessageSent response;
+	
+	request.header.clientId    = _clientID;
+	request.header.payloadSize = sizeof(request.payloadHeader);
+	if (!getClientId(username, request.payloadHeader.clientId))
+	{
+		clearLastError();
+		_lastError << "username '" << username << "' doesn't exist. Please check your input or try to request users list again.";
+		return false;
+	}
+
+	if (!_socketHandler.sendReceive(reinterpret_cast<const uint8_t* const>(&request), sizeof(request),
+		reinterpret_cast<uint8_t* const>(&response), sizeof(response)))
+	{
+		clearLastError();
+		_lastError << "Failed communicating with server on " << _socketHandler;
+		return false;
+	}
+	
+	// parse and validate SResponseMessageSent
+	if (!validateHeader(response.header, RESPONSE_MSG_SENT))
+		return false;  // error message updated within.
+
+	if (request.payloadHeader.clientId != response.payload.clientId)
+	{
+		clearLastError();
+		_lastError << "Unexpected clientID was received.";
+		return false;
+	}
+
+	std::cout << "Message ID: " << response.payload.messageId << std::endl; // todo debug remove.
 	
 	return true;
 }

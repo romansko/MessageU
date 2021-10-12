@@ -5,8 +5,52 @@ database.py: handles server's database.
 __author__ = "Roman Koifman"
 
 import sqlite3
-import client
-import message
+import protocol
+
+
+class Client:
+    """ Represents a client entry """
+
+    def __init__(self, cid, cname, public_key, last_seen):
+        self.ID = bytes.fromhex(cid)  # Unique client ID, 16 bytes.
+        self.Name = cname  # Client's name, null terminated ascii string, 255 bytes.
+        self.PublicKey = public_key  # Client's public key, 160 bytes.
+        self.LastSeen = last_seen  # The Date & time of client's last request.
+
+    def validate(self):
+        """ Validate Client attributes according to the requirements """
+        if not self.ID or len(self.ID) != protocol.CLIENT_ID_SIZE:
+            return False
+        if not self.Name or len(self.Name) >= protocol.CLIENT_NAME_SIZE:
+            return False
+        if not self.PublicKey or len(self.PublicKey) != protocol.CLIENT_PUBLIC_KEY_SIZE:
+            return False
+        if not self.LastSeen:
+            return False
+        return True
+
+
+class Message:
+    """ Represents a message entry """
+
+    def __init__(self, msg_id, to_client, from_client, mtype, content):
+        self.ID = msg_id  # Message ID, bytes.
+        self.ToClient = to_client  # Receiver's unique ID, 16 bytes.
+        self.FromClient = from_client  # Sender's unique ID, 16 bytes.
+        self.Type = mtype  # Message type, 1 byte.
+        self.Content = content  # Message's content, Blob.
+
+    def validate(self):
+        """ Validate Message attributes according to the requirements """
+        if not self.ID or self.ID > protocol.MSG_ID_MAX:
+            return False
+        if not self.ToClient or len(self.ToClient) != protocol.CLIENT_ID_SIZE:
+            return False
+        if not self.FromClient or len(self.FromClient) != protocol.CLIENT_ID_SIZE:
+            return False
+        if not self.Type or self.Type > protocol.MSG_TYPE_MAX:
+            return False
+        return True
 
 
 class Database:
@@ -78,19 +122,31 @@ class Database:
         return exists
 
     def storeClient(self, clnt):
-        if not type(clnt) is client.Client or not clnt.validate():
+        if not type(clnt) is Client or not clnt.validate():
             return False
         try:
             conn = self.connect()
             cur = conn.cursor()
-            cur.execute(f"INSERT INTO {Database.CLIENTS} VALUES (?, ?, ?, ?)", [clnt.ID,
-                                                                                clnt.Name,
-                                                                                clnt.PublicKey,
-                                                                                clnt.LastSeen])
+            cur.execute(f"INSERT INTO {Database.CLIENTS} VALUES (?, ?, ?, ?)",
+                        [clnt.ID, clnt.Name, clnt.PublicKey, clnt.LastSeen])
             conn.commit()
             conn.close()
             return True
         except Exception as e:
+            return False
+
+    def storeMessage(self, msg):
+        if not type(msg) is Message or not msg.validate():
+            return False
+        try:
+            conn = self.connect()
+            cur = conn.cursor()
+            cur.execute(f"INSERT INTO {Database.MESSAGES} VALUES (?, ?, ?, ?, ?)",
+                        [msg.ID, msg.ToClient, msg.FromClient, msg.Type, msg.Content])
+            conn.commit()
+            conn.close()
+            return True
+        except:
             return False
 
     def getClientsList(self):
@@ -114,3 +170,4 @@ class Database:
             return key
         except:
             return []
+

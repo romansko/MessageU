@@ -9,7 +9,6 @@ import logging
 import selectors
 import uuid
 import socket
-import client
 import utils
 import database
 import protocol
@@ -67,7 +66,7 @@ class Server:
             leftover = size - sent
             if leftover > Server.PACKET_SIZE:
                 leftover = Server.PACKET_SIZE
-            toSend = data[sent:sent+leftover]
+            toSend = data[sent:sent + leftover]
             if len(toSend) < Server.PACKET_SIZE:
                 toSend += bytearray(Server.PACKET_SIZE - len(toSend))
             try:
@@ -76,7 +75,6 @@ class Server:
             except:
                 logging.error("Failed to send data to " + conn)
                 return
-
 
     def start(self):
         """ Start listen for connections. Contains the main loop. """
@@ -117,7 +115,7 @@ class Server:
         except:
             logging.error("Registration Request: Failed to connect to database.")
             return False
-        clnt = client.Client(uuid.uuid4().hex, request.name, request.publicKey, str(datetime.now()))
+        clnt = database.Client(uuid.uuid4().hex, request.name, request.publicKey, str(datetime.now()))
         if not self.database.storeClient(clnt):
             logging.error("Registration Request: Failed to store client.")
             return False
@@ -143,7 +141,7 @@ class Server:
         for user in clients:
             if user[0] != request.clientID:  # Do not send self. Requirement.
                 payload += user[0]
-                name = user[1] + bytes('\0'*(protocol.CLIENT_NAME_SIZE - len(user[1])), 'utf-8')
+                name = user[1] + bytes('\0' * (protocol.CLIENT_NAME_SIZE - len(user[1])), 'utf-8')
                 payload += name
         response.payloadSize = len(payload)
         self.write(conn, response.pack() + payload)
@@ -165,6 +163,26 @@ class Server:
         return True
 
     def handleMessageSendRequest(self, conn, data):
+        request = protocol.MessageSendRequest()
+        response = protocol.MessageSentResponse(Server.VERSION)
+        if not request.unpack(data):
+            logging.error("Failed to parse request header!")
+
+        msgID = 1234  # todo static
+        msg = database.Message(msgID,
+                               request.clientID,
+                               request.header.clientID,
+                               request.messageType,
+                               request.content)
+
+        if not self.database.storeMessage(msg):
+            logging.error("Send Message Request: Failed to store client.")
+            return False
+
+        response.header.payloadSize = protocol.CLIENT_ID_SIZE + protocol.MSG_ID_SIZE
+        response.clientID = request.clientID
+        response.messageID = msgID
+        self.write(conn, response.pack())
         return False
 
     def handlePendingMessagesRequest(self, conn, data):

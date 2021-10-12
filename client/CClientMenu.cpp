@@ -217,26 +217,36 @@ void CClientMenu::handleUserChoice()
 	case MENU_REQ_PENDING_MSG:
 	{
 		std::cout << "Request for waiting messages" << std::endl;
+		std::cout << "UNIMPLEMENTED" << std::endl;
 		break;
 	}
 	case MENU_SEND_MSG:
 	{
 		std::cout << "Send a text message" << std::endl;
+		std::cout << "UNIMPLEMENTED" << std::endl;
 		break;
 	}
 	case MENU_REQ_SYM_KEY:
 	{
 		std::cout << "Send a request for symmetric key" << std::endl;
+		const auto username = readUserInput("Please type a username..");
+		success = _clientLogic.requestSymmetricKey(username);
+		if (success)
+		{
+			std::cout << "success" << std::endl;
+		}
 		break;
 	}
 	case MENU_SEND_SYM_KEY:
 	{
 		std::cout << "Send your symmetric key" << std::endl;
+		std::cout << "UNIMPLEMENTED" << std::endl;
 		break;
 	}
 	case MENU_SEND_FILE:
 	{
 		std::cout << "File Send" << std::endl;
+		std::cout << "UNIMPLEMENTED" << std::endl;
 		break;
 	}
 	default:  /* Can't happen. Was validated in readValidateUserChoice. */

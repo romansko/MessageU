@@ -10,6 +10,10 @@ from enum import Enum
 DEF_VAL = 0
 HEADER_SIZE = 7  # Header size without clientID
 CLIENT_ID_SIZE = 16
+MSG_ID_SIZE = 4
+MSG_TYPE_SIZE = 1
+MSG_TYPE_MAX = 0xFF
+MSG_ID_MAX = 0xFFFFFFFF
 CLIENT_NAME_SIZE = 255
 CLIENT_PUBLIC_KEY_SIZE = 160
 REQUEST_OPTIONS = 5
@@ -141,6 +145,48 @@ class PublicKeyResponse:
             data = self.header.pack()
             data += struct.pack(f"<{CLIENT_ID_SIZE}s", self.clientID)
             data += struct.pack(f"<{CLIENT_PUBLIC_KEY_SIZE}s", self.publicKey)
+            return data
+        except:
+            return b""
+
+
+class MessageSendRequest:
+    def __init__(self):
+        self.header = RequestHeader()
+        self.clientID = b""
+        self.messageType = DEF_VAL
+        self.contentSize = DEF_VAL
+        self.content = b""
+
+    def unpack(self, data):
+        if not self.header.unpack(data):
+            return False
+        try:
+            clientID = data[self.header.size:self.header.size + CLIENT_ID_SIZE]
+            self.clientID = struct.unpack(f"<{CLIENT_ID_SIZE}s", clientID)[0]
+            offset = self.header.size + CLIENT_ID_SIZE
+            self.messageType, self.contentSize = struct.unpack("<BL", data[offset:offset+5])
+            offset = self.header.size + CLIENT_ID_SIZE + 5
+            self.content = struct.unpack(f"<{self.contentSize}s", data[offset:offset+self.contentSize])[0]
+            return True
+        except:
+            self.clientID = b""
+            self.messageType = DEF_VAL
+            self.contentSize = DEF_VAL
+            self.content = b""
+            return False
+
+
+class MessageSentResponse:
+    def __init__(self, version):
+        self.header = ResponseHeader(version, EResponseCode.RESPONSE_MSG_SENT.value)
+        self.clientID = b""
+        self.messageID = b""
+
+    def pack(self):
+        try:
+            data = self.header.pack()
+            data += struct.pack(f"<{CLIENT_ID_SIZE}sL", self.clientID, self.messageID)
             return data
         except:
             return b""

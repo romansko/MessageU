@@ -32,18 +32,19 @@ public:
 	// client logic to be invoked by client menu.
 	bool parseServeInfo();
 	bool parseClientInfo();
-	std::string getUserID(const std::string& username) const;
+	std::string getClientId(const std::string& username) const;
 	std::vector<std::string> getUsernames() const;
 	bool registerClient(const std::string& username);
 	bool requestClientsList();
 	bool requestClientPublicKey(const std::string& username, std::string& publicKey);
+	bool requestSymmetricKey(const std::string& username);
 
 private:
 	void clearLastError();
 	bool storeClientInfo();
 	bool validateHeader(const SResponseHeader& header, const EResponseCode expectedCode);
 	bool receiveUnknownPayload(const EResponseCode expectedCode, uint8_t*& payload, size_t& size);
-
+	bool getClientId(const std::string& username, SClientID& clientId) const;
 	
 	std::map<std::string /*clientId*/, std::string /*username*/> _usersList;  // updates only upon user request.
 	std::stringstream  _lastError;

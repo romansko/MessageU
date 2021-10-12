@@ -163,13 +163,13 @@ struct SRequestSendMessage
 	SRequestHeader header;
 	struct SPayloadHeaderSendMessage
 	{
-		SClientID     clientId;   // destination client
-		messageType_t messageType;
-		csize_t       contentSize;
-		SPayloadHeaderSendMessage(): messageType(DEF_VAL), contentSize(DEF_VAL) {}
+		SClientID           clientId;   // destination client
+		const messageType_t messageType;
+		csize_t             contentSize;
+		SPayloadHeaderSendMessage(messageType_t type): messageType(type), contentSize(DEF_VAL) {}
 	}payloadHeader;
 	/* variable payload */
-	SRequestSendMessage() : header(REQUEST_SEND_MSG) {}
+	SRequestSendMessage(messageType_t type) : header(REQUEST_SEND_MSG), payloadHeader(type){}
 };
 
 struct SResponseMessageSent
