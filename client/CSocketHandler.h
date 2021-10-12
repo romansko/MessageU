@@ -19,9 +19,6 @@ class CSocketHandler
 public:
 	CSocketHandler();
 	~CSocketHandler();
-	
-	friend std::ostream& operator<<(std::ostream& os, const CSocketHandler& socket);
-	bool setSocketInfo(const std::string& address, const std::string& port);
 
 	// do not allow
 	CSocketHandler(const CSocketHandler& other) = delete;
@@ -29,11 +26,18 @@ public:
 	CSocketHandler& operator=(const CSocketHandler& other) = delete;
 	CSocketHandler& operator=(CSocketHandler&& other) noexcept = delete;
 
+	friend std::ostream& operator<<(std::ostream& os, const CSocketHandler& socket)
+	{
+		os << socket._address << ':' << socket._port;
+		return os;
+	}
+
 	// validations
 	static bool isValidAddress(const std::string& address);
 	static bool isValidPort(const std::string& port);
 
 	// logic
+	bool setSocketInfo(const std::string& address, const std::string& port);
 	bool connect();
 	void close();
 	bool receive(uint8_t(&buffer)[PACKET_SIZE]) const;

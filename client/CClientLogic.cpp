@@ -378,7 +378,6 @@ bool CClientLogic::registerClient(const std::string& username)
 	}
 
 	// fill request data
-	request.header.code = REQUEST_REGISTRATION;
 	request.header.payloadSize = sizeof(request.payload);
 	memcpy(request.payload.clientName.name, username.c_str(), username.length());
 	memcpy(request.payload.clientPublicKey.publicKey, publicKey.c_str(), sizeof(request.payload.clientPublicKey.publicKey));
@@ -411,13 +410,11 @@ bool CClientLogic::registerClient(const std::string& username)
 
 bool CClientLogic::requestClientsList()
 {
-	SRequestHeader request;
-	SResponseHeader response;
+	SRequestClientsList request;
 	uint8_t* payload = nullptr;
 	size_t payloadSize = 0;
 	
-	request.code = REQUEST_USERS;
-	request.clientID = _clientID;
+	request.header.clientId = _clientID;
 	if (!_socketHandler.connect())
 	{
 		clearLastError();
@@ -484,8 +481,7 @@ bool CClientLogic::requestClientPublicKey(const std::string& username, std::stri
 
 	SRequestPublicKey  request;
 	SResponsePublicKey response;
-	request.header.code = REQUEST_PUBLIC_KEY;
-	request.header.clientID = _clientID;
+	request.header.clientId = _clientID;
 	userID = unhex(userID);
 	const char* unhexed = userID.c_str();
 	if (strlen(unhexed) != sizeof(request.payload.uuid))

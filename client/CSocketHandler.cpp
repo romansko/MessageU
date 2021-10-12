@@ -30,12 +30,6 @@ CSocketHandler::~CSocketHandler()
 	close();
 }
 
-std::ostream& operator<<(std::ostream& os, const CSocketHandler& socket)
-{
-	os << socket._address << ':' << socket._port;
-	return os;
-}
-
 bool CSocketHandler::setSocketInfo(const std::string& address, const std::string& port)
 {
 	if (!isValidAddress(address) || !isValidPort(port))

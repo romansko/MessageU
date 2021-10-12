@@ -8,18 +8,27 @@
 #pragma once
 #include <cstdint>
 
-#define DEF_VAL 0   // Default value used to initialize protocol structures.
-constexpr uint8_t CLIENT_VERSION        = 2;
-constexpr size_t CLIENT_ID_SIZE         = 16;
-constexpr size_t CLIENT_NAME_SIZE       = 255;
-constexpr size_t CLIENT_PUBLIC_KEY_SIZE = 160;
-constexpr size_t REQUEST_OPTIONS        = 5;
-constexpr size_t RESPONSE_OPTIONS       = 6;
+enum { DEF_VAL = 0 };  // Default value used to initialize protocol structures.
+
+ // Common types
+typedef uint8_t  version_t;
+typedef uint16_t code_t;
+typedef uint8_t  messageType_t;
+typedef uint32_t messageID_t;
+typedef uint32_t csize_t;  // protocol's size type: Content's, payload's and message's size.
+
+// constants
+constexpr version_t CLIENT_VERSION         = 2;
+constexpr size_t    CLIENT_ID_SIZE         = 16;
+constexpr size_t    CLIENT_NAME_SIZE       = 255;
+constexpr size_t    CLIENT_PUBLIC_KEY_SIZE = 160;
+constexpr size_t    REQUEST_OPTIONS        = 5;
+constexpr size_t    RESPONSE_OPTIONS       = 6;
 
 enum ERequestCode
 {
 	REQUEST_REGISTRATION   = 1000,   // uuid ignored.
-	REQUEST_USERS          = 1001,   // payload invalid. payloadSize = 0.
+	REQUEST_CLIENTS_LIST   = 1001,   // payload invalid. payloadSize = 0.
 	REQUEST_PUBLIC_KEY     = 1002,
 	REQUEST_SEND_MSG       = 1003,
 	REQUEST_PENDING_MSG    = 1004    // payload invalid. payloadSize = 0.
@@ -96,25 +105,26 @@ struct SClientNamePublicKey
 
 struct SRequestHeader
 {
-	SClientID     clientID;
-    const uint8_t version;
-    uint16_t      code;
-	uint32_t      payloadSize;
-    SRequestHeader(): version(CLIENT_VERSION), code(DEF_VAL), payloadSize(DEF_VAL) {}
+	SClientID       clientId;
+	const version_t version;
+	const code_t    code;
+	csize_t         payloadSize;
+	SRequestHeader(code_t reqCode) : version(CLIENT_VERSION), code(reqCode), payloadSize(DEF_VAL) {}
 };
 
 struct SResponseHeader
 {
-	uint8_t   version;
-	uint16_t  code;
-	uint32_t  payloadSize;
-	SResponseHeader(): version(DEF_VAL), code(DEF_VAL), payloadSize(DEF_VAL) {}
+	version_t version;
+	code_t    code;
+	csize_t   payloadSize;
+	SResponseHeader() : version(DEF_VAL), code(DEF_VAL), payloadSize(DEF_VAL) {}
 };
 
 struct SRequestRegistration
 {
 	SRequestHeader       header;
 	SClientNamePublicKey payload;
+	SRequestRegistration() : header(REQUEST_REGISTRATION) {}
 };
 
 struct SResponseRegistration
@@ -123,10 +133,23 @@ struct SResponseRegistration
 	SClientID       payload;
 };
 
+struct SRequestClientsList
+{
+	SRequestHeader header;
+	SRequestClientsList() : header(REQUEST_CLIENTS_LIST) {}
+};
+
+struct SResponseClientsList
+{
+	SResponseHeader header;
+	/* variable SClientIDName. */
+};
+
 struct SRequestPublicKey
 {
 	SRequestHeader header;
 	SClientID      payload;
+	SRequestPublicKey() : header(REQUEST_PUBLIC_KEY) {}
 };
 
 struct SResponsePublicKey
@@ -135,21 +158,52 @@ struct SResponsePublicKey
 	SClientIDPublicKey payload;
 };
 
-struct SMessageSent
+struct SRequestSendMessage
 {
-	SClientID clientId;   // destination
-	uint32_t  messageId;
-	SMessageSent(): messageId(DEF_VAL) {}
+	SRequestHeader header;
+	struct SPayloadHeaderSendMessage
+	{
+		SClientID     clientId;   // destination client
+		messageType_t messageType;
+		csize_t       contentSize;
+		SPayloadHeaderSendMessage(): messageType(DEF_VAL), contentSize(DEF_VAL) {}
+	}payloadHeader;
+	/* variable payload */
+	SRequestSendMessage() : header(REQUEST_SEND_MSG) {}
 };
 
-struct SMessagePending
+struct SResponseMessageSent
 {
-	SClientID clientId;   // source
-	uint32_t  messageId;
-	uint8_t   messageType;
-	uint32_t  messageSize;
-	SMessagePending(): messageId(DEF_VAL), messageType(DEF_VAL), messageSize(DEF_VAL) {}
+	SResponseHeader header;
+	struct SPayloadMessageSent
+	{
+		SClientID   clientId;   // destination client
+		messageID_t messageId;
+		SPayloadMessageSent() : messageId(DEF_VAL) {}
+	}payload;
+};
+
+struct SRequestMessages
+{
+	SRequestHeader header;
+	SRequestMessages() : header(REQUEST_PENDING_MSG) {}
+};
+
+
+struct SPendingMessageHeader
+{
+	SClientID     clientId;   // message's clientID.
+	messageID_t   messageId;
+	messageType_t messageType;
+	csize_t       messageSize;
+	/* Variable Size content */
+	SPendingMessageHeader() : messageId(DEF_VAL), messageType(DEF_VAL), messageSize(DEF_VAL) {}
+};
+
+struct SResponseMessages
+{
+	SResponseHeader header;
+	/* Variable SPendingMessageHeader */
 };
 
 #pragma pack(pop)
-

@@ -45,7 +45,7 @@ private:
 	bool receiveUnknownPayload(const EResponseCode expectedCode, uint8_t*& payload, size_t& size);
 
 	
-	std::map<std::string /*clientID*/, std::string /*username*/> _usersList;  // updates only upon user request.
+	std::map<std::string /*clientId*/, std::string /*username*/> _usersList;  // updates only upon user request.
 	std::stringstream  _lastError;
 	CFileHandler       _fileHandler;
 	CSocketHandler     _socketHandler;
