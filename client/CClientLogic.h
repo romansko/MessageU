@@ -19,8 +19,10 @@ public:
 	CClientLogic& operator=(CClientLogic&& other) noexcept = delete;
 
 	// static functions
-	static std::string hexify(const uint8_t* buffer, const size_t size);
-	static bool unhexify(const std::string& hexString, uint8_t* const buffer, const size_t size);
+	static std::string hex(const std::string& str);
+	static std::string hex(const uint8_t* buffer, const size_t size);
+	static std::string unhex(const std::string& str);
+	static std::string unhex(const uint8_t* buffer, const size_t size);
 	
 	// inline getters
 	std::string getLastError() const { return _lastError.str(); }

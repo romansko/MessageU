@@ -3,6 +3,7 @@
 #include <iostream>
 #include <iomanip>
 #include <boost/algorithm/string/trim.hpp>
+#include <boost/algorithm/hex.hpp>
 #include "Base64Wrapper.h"
 
 CClientLogic::CClientLogic() : _rsaDecryptor(nullptr)
@@ -14,33 +15,46 @@ CClientLogic::~CClientLogic()
 	delete _rsaDecryptor;
 }
 
-std::string CClientLogic::hexify(const uint8_t* buffer, const size_t size)
+std::string CClientLogic::hex(const std::string& str)
 {
-	std::stringstream hexified;
-	const std::ios::fmtflags f(std::cout.flags());
-	hexified << std::hex;
-	for (size_t i = 0; i < size; ++i)
-		hexified << std::setfill('0') << std::setw(2) << (0xFF & buffer[i]);
-	hexified.flags(f);
-	return hexified.str();
-}
-
-bool CClientLogic::unhexify(const std::string& hexString, uint8_t* const buffer, const size_t size)
-{
-	if ((hexString.length() / 2) != size)  // Each byte is represented by two ASCII chars.
-		return false;
+	if (str.empty())
+		return "";
 	try
 	{
-		for (size_t i = 0; i < size; ++i)
-		{
-			buffer[i] = static_cast<uint8_t>(std::stoi(hexString.substr(i * 2, 2), nullptr, 16));
-		}
+		return boost::algorithm::hex(str);
+	}
+	catch(...)
+	{
+		return "";
+	}
+}
+
+std::string CClientLogic::hex(const uint8_t* buffer, const size_t size)
+{
+	if (size == 0 || buffer == nullptr)
+		return "";
+	return hex(std::string(buffer, buffer + size));
+}
+
+std::string CClientLogic::unhex(const std::string& str)
+{
+	if (str.empty())
+		return "";
+	try
+	{
+		return boost::algorithm::unhex(str);
 	}
 	catch (...)
 	{
-		return false;
+		return "";
 	}
-	return true;
+}
+
+std::string CClientLogic::unhex(const uint8_t* buffer, const size_t size)
+{
+	if (size == 0 || buffer == nullptr)
+		return "";
+	return unhex(std::string(buffer, buffer + size));
 }
 
 /**
@@ -115,13 +129,17 @@ bool CClientLogic::parseClientInfo()
 		_lastError << "Couldn't read client's UUID from " << CLIENT_INFO;
 		return false;
 	}
-	if (!unhexify(line, _clientID.uuid, sizeof(_clientID.uuid)))
+
+	line = unhex(line);
+	const char* unhexed = line.c_str();
+	if (strlen(unhexed) != sizeof(_clientID.uuid))
 	{
 		memset(_clientID.uuid, 0, sizeof(_clientID.uuid));
 		clearLastError();
 		_lastError << "Couldn't parse client's UUID from " << CLIENT_INFO;
 		return false;
 	}
+	memcpy(_clientID.uuid, unhexed, sizeof(_clientID.uuid));
 
 	// Read & Parse Client's private key.
 	std::string decodedKey;
@@ -152,7 +170,7 @@ bool CClientLogic::parseClientInfo()
 std::string CClientLogic::getUserID(const std::string& username) const
 {
 	if (username == _username)
-		return hexify(_clientID.uuid, sizeof(_clientID.uuid));
+		return hex(_clientID.uuid, sizeof(_clientID.uuid));
 	const auto it = std::find_if(_usersList.begin(), _usersList.end(),
 		[&username](const std::pair<std::string, std::string>& client) {
 			return (client.second == username);
@@ -203,7 +221,7 @@ bool CClientLogic::storeClientInfo()
 	}
 
 	// Write UUID.
-	const auto hexifiedUUID = hexify(_clientID.uuid, sizeof(_clientID.uuid));
+	const auto hexifiedUUID = hex(_clientID.uuid, sizeof(_clientID.uuid));
 	if (!_fileHandler.writeLine(hexifiedUUID))
 	{
 		clearLastError();
@@ -446,7 +464,7 @@ bool CClientLogic::requestClientsList()
 		parsedBytes += sizeof(SClientIDName);
 		client.clientName.name[sizeof(client.clientName.name) - 1] = '\0'; // just in case..
 		const std::string name = reinterpret_cast<char*>(client.clientName.name);
-		const std::string clientID = hexify(client.clientId.uuid, sizeof(client.clientId.uuid));
+		const std::string clientID = hex(client.clientId.uuid, sizeof(client.clientId.uuid));
 		_usersList.insert(std::pair<std::string, std::string>(clientID, name));
 	}
 	delete[] payload;
@@ -456,7 +474,7 @@ bool CClientLogic::requestClientsList()
 bool CClientLogic::requestClientPublicKey(const std::string& username, std::string& publicKey)
 {
 	publicKey = "";
-	const std::string userID = getUserID(username);
+	std::string userID = getUserID(username);
 	if (userID.empty())
 	{
 		clearLastError();
@@ -468,12 +486,15 @@ bool CClientLogic::requestClientPublicKey(const std::string& username, std::stri
 	SResponsePublicKey response;
 	request.header.code = REQUEST_PUBLIC_KEY;
 	request.header.clientID = _clientID;
-	if (!unhexify(userID, request.payload.uuid, sizeof(request.payload.uuid)))
+	userID = unhex(userID);
+	const char* unhexed = userID.c_str();
+	if (strlen(unhexed) != sizeof(request.payload.uuid))
 	{
 		clearLastError();
 		_lastError << "Invalid userID: " << userID;
 		return false;
 	}
+	memcpy(request.payload.uuid, unhexed, sizeof(request.payload.uuid));
 
 	if (!_socketHandler.sendReceive(reinterpret_cast<const uint8_t* const>(&request), sizeof(request),
 		reinterpret_cast<uint8_t* const>(&response), sizeof(response)))
@@ -494,7 +515,7 @@ bool CClientLogic::requestClientPublicKey(const std::string& username, std::stri
 		return false;
 	}
 
-	publicKey = hexify(response.payload.clientPublicKey.publicKey, sizeof(response.payload.clientPublicKey.publicKey));
+	publicKey = hex(response.payload.clientPublicKey.publicKey, sizeof(response.payload.clientPublicKey.publicKey));
 	
 	return true;
 }

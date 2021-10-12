@@ -22,7 +22,7 @@ int aes_example()
 	// 2. encrypt a message (plain text)
 	std::string ciphertext = aes.encrypt(plaintext.c_str(), plaintext.length());
 	std::cout << "Cipher:" << std::endl;
-	CClientLogic::hexify(reinterpret_cast<const unsigned char*>(ciphertext.c_str()), ciphertext.length());	// print binary data nicely
+	std::cout << CClientLogic::hex(ciphertext.c_str()) << std::endl;;	// print binary data nicely
 
 	// 3. decrypt a message (cipher text)
 	std::string decrypttext = aes.decrypt(ciphertext.c_str(), ciphertext.length());
@@ -38,7 +38,7 @@ int rsa_example()
 	// plain text (could be binary data as well)
 	unsigned char plain[] = { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF };
 	std::cout << "plain:" << std::endl;
-	CClientLogic::hexify(plain, sizeof(plain));		// print binary data nicely
+	std::cout << CClientLogic::hex(plain, sizeof(plain)) << std::endl;		// print binary data nicely
 
 	// 1. Create an RSA decryptor. this is done here to generate a new private/public key pair
 	RSAPrivateWrapper rsapriv;
@@ -53,7 +53,7 @@ int rsa_example()
 	RSAPublicWrapper rsapub(pubkey);
 	std::string cipher = rsapub.encrypt((const char*)plain, sizeof(plain));	// you can encrypt a const char* or an std::string 
 	std::cout << "cipher:" << std::endl;
-	CClientLogic::hexify((unsigned char*)cipher.c_str(), cipher.length());	// print binary data nicely
+	std::cout << CClientLogic::hex(cipher) << std::endl;	// print binary data nicely
 
 
 	// 4. get the private key and encode it as base64 (base64 in not necessary for an RSA decryptor.)
@@ -64,7 +64,7 @@ int rsa_example()
 
 	std::string decrypted = rsapriv_other.decrypt(cipher);		// 6. you can decrypt an std::string or a const char* buffer
 	std::cout << "decrypted:" << std::endl;
-	CClientLogic::hexify((unsigned char*)decrypted.c_str(), decrypted.length());	// print binary data nicely
+	std::cout << CClientLogic::hex(decrypted) << std::endl;	// print binary data nicely
 
 	return 0;
 }
@@ -74,7 +74,7 @@ int main(int argc, char* argv[])
 {
 	//aes_example();
     //rsa_example();
-	
+
 	CClientMenu menu;
 	menu.initialize();
 	
