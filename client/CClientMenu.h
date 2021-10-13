@@ -7,7 +7,8 @@
 
 #pragma once
 #include "CClientLogic.h"
-
+#include <string>       // std::to_string
+#include <iomanip>      // std::setw
 
 class CClientMenu
 {
@@ -18,41 +19,62 @@ public:
 	void handleUserChoice();
 
 private:
-	const int INVALID_CHOICE = -1;
-	enum EOptions
+	
+	class CMenuOption
 	{
-		MENU_EXIT = 0,
-		MENU_REGISTER = 10,
-		MENU_REQ_CLIENT_LIST = 20,
-		MENU_REQ_PUBLIC_KEY = 30,
-		MENU_REQ_PENDING_MSG = 40,
-		MENU_SEND_MSG = 50,
-		MENU_REQ_SYM_KEY = 51,
-		MENU_SEND_SYM_KEY = 52,
-		MENU_SEND_FILE = 53
+	public:
+		static const int INVALID_CHOICE = -1;
+		enum EOption
+		{
+			MENU_REGISTER = 10,
+			MENU_REQ_CLIENT_LIST = 20,
+			MENU_REQ_PUBLIC_KEY = 30,
+			MENU_REQ_PENDING_MSG = 40,
+			MENU_SEND_MSG = 50,
+			MENU_REQ_SYM_KEY = 51,
+			MENU_SEND_SYM_KEY = 52,
+			MENU_SEND_FILE = 53,
+			MENU_EXIT = 0
+		};
+
+	private:
+		const EOption     _value;
+		const bool        _registration;  // indicates whether registration is required before option usage.
+		const std::string _description;
+
+	public:
+		
+		CMenuOption(const EOption val, const bool reg, std::string desc) : _value(val), _registration(reg), _description(std::move(desc)) {}
+		friend std::ostream& operator<<(std::ostream& os, const CMenuOption& opt) {
+			os << std::setw(2) << std::to_string(opt._value) << ") " << opt._description;
+			return os;
+		}
+		EOption getValue() const { return _value; }
+		bool requireRegistration() const { return _registration; }
+		std::string getDescription() const { return _description; }
 	};
-	const std::vector<EOptions> _menuOptions {
-		MENU_EXIT,
-		MENU_REGISTER,
-		MENU_REQ_CLIENT_LIST,
-		MENU_REQ_PUBLIC_KEY,
-		MENU_REQ_PENDING_MSG,
-		MENU_SEND_MSG,
-		MENU_REQ_SYM_KEY,
-		MENU_SEND_SYM_KEY,
-		MENU_SEND_FILE,
+
+	const std::vector<CMenuOption> _menuOptions {
+		{ CMenuOption::EOption::MENU_REGISTER,        false, "Register" },
+		{ CMenuOption::EOption::MENU_REQ_CLIENT_LIST, true,  "Request for client list" },
+		{ CMenuOption::EOption::MENU_REQ_PUBLIC_KEY,  true,  "Request for public key" },
+		{ CMenuOption::EOption::MENU_REQ_PENDING_MSG, true,  "Request for waiting messages" },
+		{ CMenuOption::EOption::MENU_SEND_MSG,        true,  "Send a text message" },
+		{ CMenuOption::EOption::MENU_REQ_SYM_KEY,     true,  "Send a request for symmetric key" },
+		{ CMenuOption::EOption::MENU_SEND_SYM_KEY,    true,  "Send your symmetric key" },
+		{ CMenuOption::EOption::MENU_SEND_FILE,       true,  "Send a file" },
+		{ CMenuOption::EOption::MENU_EXIT,            false, "Exit client" }
 	};
 	
 	void clientStop(const std::string& error);
 	void clearMenu() const;
 	std::string readUserInput(const std::string& description = "") const;
+	CMenuOption getMenuOption(CMenuOption::EOption val) const;
 	int readValidateUserChoice() const;
 
-	const std::string _welcomeString = "MessageU client at your service.";
-	const std::string _serverErrorString = "Server responded with an error";
-	const std::string _invalidInput = "Invalid input. Please try again..";
 
 	CClientLogic _clientLogic;
 	bool         _registered;
+	
 };
 

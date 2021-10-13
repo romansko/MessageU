@@ -8,7 +8,6 @@
 
 #include "CClientMenu.h"
 #include <iostream>
-#include <string>
 #include <boost/algorithm/string/trim.hpp>
 
 
@@ -46,16 +45,9 @@ void CClientMenu::display() const
 	clearMenu();
 	if (_registered && !_clientLogic.getSelfUsername().empty())
 		std::cout << "Hello " << _clientLogic.getSelfUsername() << ", ";
-	std::cout << _welcomeString << std::endl << std::endl
-		<< MENU_REGISTER        << ") Register" << std::endl
-		<< MENU_REQ_CLIENT_LIST << ") Request for client list" << std::endl
-		<< MENU_REQ_PUBLIC_KEY  << ") Request for public key" << std::endl
-		<< MENU_REQ_PENDING_MSG << ") Request for waiting messages" << std::endl
-		<< MENU_SEND_MSG        << ") Send a text message" << std::endl
-		<< MENU_REQ_SYM_KEY     << ") Send a request for symmetric key" << std::endl
-		<< MENU_SEND_SYM_KEY    << ") Send your symmetric key" << std::endl
-		<< MENU_SEND_FILE       << ") Send a file" << std::endl
-		<< " " << MENU_EXIT     << ") Exit client" << std::endl;
+	std::cout << "MessageU client at your service." << std::endl << std::endl;
+	for (const auto& opt : _menuOptions)
+		std::cout << opt << std::endl;
 }
 
 void CClientMenu::clearMenu() const
@@ -80,16 +72,26 @@ std::string CClientMenu::readUserInput(const std::string& description) const
 }
 
 /**
+ * Get menu option. valid EOption will succeed.
+ */
+CClientMenu::CMenuOption CClientMenu::getMenuOption(CMenuOption::EOption val) const
+{
+	const auto it = std::find_if(_menuOptions.begin(), _menuOptions.end(),
+		[&val](auto& opt) { return val == opt.getValue(); });
+	return *it;
+}
+
+/**
  * Read & Validate user's input according to main menu options.
+ * Return as int because of INVALID_CHOICE usage.
  */
 int CClientMenu::readValidateUserChoice() const
 {
-	const auto input = readUserInput();
+	const std::string input = readUserInput();
+	
 	const auto it = std::find_if(_menuOptions.begin(), _menuOptions.end(),
-		[&input](const EOptions& opt) {
-			return (input == std::to_string(opt) );
-		});
-	return (it == _menuOptions.end()) ? INVALID_CHOICE : *it;
+		[&input](auto& opt) { return (input == std::to_string(opt.getValue())); });
+	return (it == _menuOptions.end()) ? CMenuOption::INVALID_CHOICE : it->getValue();
 }
 
 
@@ -98,26 +100,31 @@ int CClientMenu::readValidateUserChoice() const
  */
 void CClientMenu::handleUserChoice()
 {
+	bool success = true;
 	int userChoice = readValidateUserChoice();
-	while (userChoice == INVALID_CHOICE)
+	while (userChoice == CMenuOption::INVALID_CHOICE)
 	{
-		std::cout << _invalidInput << std::endl;
+		std::cout << "Invalid input. Please try again.." << std::endl;
 		userChoice = readValidateUserChoice();
 	}
 
 	clearMenu();
-	bool success = true;
+	const auto menuOption = getMenuOption(static_cast<CMenuOption::EOption>(userChoice));
+	std::cout << menuOption.getDescription() << std::endl;
+	if (!_registered && menuOption.requireRegistration())
+	{
+		std::cout << "You must register first!" << std::endl;
+		return;
+	}
 	switch (userChoice)
 	{
-	case MENU_EXIT:
+	case CMenuOption::MENU_EXIT:
 	{
-		std::cout << "MessageU Client will now exit." << std::endl;
 		system("pause");
 		exit(0);
 	}
-	case MENU_REGISTER:
+	case CMenuOption::MENU_REGISTER:
 	{
-		std::cout << "MessageU Client Registration" << std::endl;
 		if (_registered)
 		{
 			std::cout << "You have already registered!" << std::endl;
@@ -132,14 +139,8 @@ void CClientMenu::handleUserChoice()
 		_registered = success;
 		break;
 	}
-	case MENU_REQ_CLIENT_LIST:
+	case CMenuOption::MENU_REQ_CLIENT_LIST:
 	{
-		std::cout << "Request for client list" << std::endl;
-		if (!_registered)
-		{
-			std::cout << "You must register before requesting clients list!" << std::endl;
-			return;
-		}
 		success = _clientLogic.requestClientsList();
 		if (success)
 		{
@@ -159,14 +160,8 @@ void CClientMenu::handleUserChoice()
 		}
 		break;
 	}
-	case MENU_REQ_PUBLIC_KEY:
+	case CMenuOption::MENU_REQ_PUBLIC_KEY:
 	{
-		std::cout << "Request for public key" << std::endl;
-		if (!_registered)
-		{
-			std::cout << "You must register before requesting clients list!" << std::endl;
-			return;
-		}
 		const auto username = readUserInput("Please type a username..");
 		std::string hexifiedKey;
 		success = _clientLogic.requestClientPublicKey(username, hexifiedKey);
@@ -184,21 +179,18 @@ void CClientMenu::handleUserChoice()
 		}
 		break;
 	}
-	case MENU_REQ_PENDING_MSG:
+	case CMenuOption::MENU_REQ_PENDING_MSG:
 	{
-		std::cout << "Request for waiting messages" << std::endl;
 		std::cout << "UNIMPLEMENTED" << std::endl;
 		break;
 	}
-	case MENU_SEND_MSG:
+	case CMenuOption::MENU_SEND_MSG:
 	{
-		std::cout << "Send a text message" << std::endl;
 		std::cout << "UNIMPLEMENTED" << std::endl;
 		break;
 	}
-	case MENU_REQ_SYM_KEY:
+	case CMenuOption::MENU_REQ_SYM_KEY:
 	{
-		std::cout << "Send a request for symmetric key" << std::endl;
 		const auto username = readUserInput("Please type a username..");
 		success = _clientLogic.requestSymmetricKey(username);
 		if (success)
@@ -207,15 +199,13 @@ void CClientMenu::handleUserChoice()
 		}
 		break;
 	}
-	case MENU_SEND_SYM_KEY:
+	case CMenuOption::MENU_SEND_SYM_KEY:
 	{
-		std::cout << "Send your symmetric key" << std::endl;
 		std::cout << "UNIMPLEMENTED" << std::endl;
 		break;
 	}
-	case MENU_SEND_FILE:
+	case CMenuOption::MENU_SEND_FILE:
 	{
-		std::cout << "File Send" << std::endl;
 		std::cout << "UNIMPLEMENTED" << std::endl;
 		break;
 	}
