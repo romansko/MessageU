@@ -8,20 +8,26 @@
 
 #include "CClientMenu.h"
 #include <iostream>
+#include <string>
 #include <boost/algorithm/string/trim.hpp>
+
 
 CClientMenu::CClientMenu() : _registered(false)
 {
 }
 
-
+/**
+ * Print error and exit client.
+ */
 void CClientMenu::clientStop(const std::string& error)
 {
 	std::cout << "Fatal Error: " << error << std::endl << "Client will stop." << std::endl;
 	exit(1);
 }
 
-
+/**
+ * Initialize client's menu & its internals.
+ */
 void CClientMenu::initialize()
 {
 	if (!_clientLogic.parseServeInfo())
@@ -57,61 +63,13 @@ void CClientMenu::clearMenu() const
 	system("cls");
 }
 
-
-/**
- * Read & Validate user's input according to main menu options.
- */
-int CClientMenu::readValidateUserChoice() const
-{
-	int opt;
-	const auto input = readUserInput();
-	
-	// do not allow multiple tokens (separated by tab or space). E.g. "20 20 20" is invalid!
-	if (input.find_first_of(" \t") != std::string::npos)
-		return INVALID_CHOICE;
-
-	if (input == "0")   // special case.
-		return MENU_EXIT;
-	
-	try
-	{
-		opt = std::stoi(input);
-	}
-	catch (...)
-	{
-		return INVALID_CHOICE;
-	}
-
-	switch (opt)
-	{
-	//case MENU_EXIT:       // special case. compared as ascii above.
-	case MENU_REGISTER:
-	case MENU_REQ_CLIENT_LIST:
-	case MENU_REQ_PUBLIC_KEY:
-	case MENU_REQ_PENDING_MSG:
-	case MENU_SEND_MSG:
-	case MENU_REQ_SYM_KEY:
-	case MENU_SEND_SYM_KEY:
-	case MENU_SEND_FILE:
-	{
-		return opt;
-	}
-	default:
-	{
-		return INVALID_CHOICE;
-	}
-	}
-}
-
-
 /**
  * Read input from console.
  */
 std::string CClientMenu::readUserInput(const std::string& description) const
 {
 	std::string input;
-	if (!description.empty())
-		std::cout << description << std::endl;
+	std::cout << description << std::endl;
 	do
 	{
 		std::getline(std::cin, input);
@@ -121,6 +79,18 @@ std::string CClientMenu::readUserInput(const std::string& description) const
 	return input;
 }
 
+/**
+ * Read & Validate user's input according to main menu options.
+ */
+int CClientMenu::readValidateUserChoice() const
+{
+	const auto input = readUserInput();
+	const auto it = std::find_if(_menuOptions.begin(), _menuOptions.end(),
+		[&input](const EOptions& opt) {
+			return (input == std::to_string(opt) );
+		});
+	return (it == _menuOptions.end()) ? INVALID_CHOICE : *it;
+}
 
 
 /**
