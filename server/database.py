@@ -33,8 +33,8 @@ class Client:
 class Message:
     """ Represents a message entry """
 
-    def __init__(self, msg_id, to_client, from_client, mtype, content):
-        self.ID = msg_id  # Message ID, bytes.
+    def __init__(self, to_client, from_client, mtype, content):
+        self.ID = 0  # Message ID, 4 bytes.
         self.ToClient = to_client  # Receiver's unique ID, 16 bytes.
         self.FromClient = from_client  # Sender's unique ID, 16 bytes.
         self.Type = mtype  # Message type, 1 byte.
@@ -42,8 +42,6 @@ class Message:
 
     def validate(self):
         """ Validate Message attributes according to the requirements """
-        if not self.ID or self.ID > protocol.MSG_ID_MAX:
-            return False
         if not self.ToClient or len(self.ToClient) != protocol.CLIENT_ID_SIZE:
             return False
         if not self.FromClient or len(self.FromClient) != protocol.CLIENT_ID_SIZE:
@@ -80,10 +78,10 @@ class Database:
             commit = True
         except:
             pass  # Table possibly already exists
-        try:
+        try:  # INTEGER PRIMARY KEY is auto incremented..
             conn.executescript(f"""
             CREATE TABLE {Database.MESSAGES}(
-              ID INT NOT NULL PRIMARY KEY,
+              ID INTEGER PRIMARY KEY,
               ToClient CHAR(16) NOT NULL,
               FromClient CHAR(16) NOT NULL,
               Type CHAR(1) NOT NULL,
@@ -141,11 +139,12 @@ class Database:
         try:
             conn = self.connect()
             cur = conn.cursor()
-            cur.execute(f"INSERT INTO {Database.MESSAGES} VALUES (?, ?, ?, ?, ?)",
-                        [msg.ID, msg.ToClient, msg.FromClient, msg.Type, msg.Content])
+            cur.execute(f"INSERT INTO {Database.MESSAGES}(ToClient, FromClient, Type, Content) VALUES (?, ?, ?, ?)",
+                        [msg.ToClient, msg.FromClient, msg.Type, msg.Content])
+            msgId = cur.lastrowid
             conn.commit()
             conn.close()
-            return True
+            return msgId
         except:
             return False
 

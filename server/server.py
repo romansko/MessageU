@@ -168,22 +168,21 @@ class Server:
         if not request.unpack(data):
             logging.error("Failed to parse request header!")
 
-        msgID = 1234  # todo static
-        msg = database.Message(msgID,
-                               request.clientID,
+        msg = database.Message(request.clientID,
                                request.header.clientID,
                                request.messageType,
                                request.content)
 
-        if not self.database.storeMessage(msg):
-            logging.error("Send Message Request: Failed to store client.")
+        msgId = self.database.storeMessage(msg)
+        if not msgId:
+            logging.error("Send Message Request: Failed to store msg.")
             return False
 
         response.header.payloadSize = protocol.CLIENT_ID_SIZE + protocol.MSG_ID_SIZE
         response.clientID = request.clientID
-        response.messageID = msgID
+        response.messageID = msgId
         self.write(conn, response.pack())
-        return False
+        return True
 
     def handlePendingMessagesRequest(self, conn, data):
         return False
