@@ -69,7 +69,7 @@ private:
 	void clientStop(const std::string& error);
 	void clearMenu() const;
 	std::string readUserInput(const std::string& description = "") const;
-	CMenuOption getMenuOption(CMenuOption::EOption val) const;
+	CMenuOption getMenuOption(const CMenuOption::EOption val) const;
 	int readValidateUserChoice() const;
 
 

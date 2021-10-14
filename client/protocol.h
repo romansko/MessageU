@@ -17,11 +17,12 @@ typedef uint8_t  messageType_t;
 typedef uint32_t messageID_t;
 typedef uint32_t csize_t;  // protocol's size type: Content's, payload's and message's size.
 
-// constants
+// Constants. All sizes are in BYTES.
 constexpr version_t CLIENT_VERSION         = 2;
 constexpr size_t    CLIENT_ID_SIZE         = 16;
 constexpr size_t    CLIENT_NAME_SIZE       = 255;
-constexpr size_t    CLIENT_PUBLIC_KEY_SIZE = 160;
+constexpr size_t    PUBLIC_KEY_SIZE        = 160;  // defined in protocol. 1024 bits.
+constexpr size_t    SYMMETRIC_KEY_SIZE     = 16;   // defined in protocol.  128 bits.
 constexpr size_t    REQUEST_OPTIONS        = 5;
 constexpr size_t    RESPONSE_OPTIONS       = 6;
 
@@ -58,17 +59,16 @@ enum EMessageType
 struct SClientID
 {
 	uint8_t uuid[CLIENT_ID_SIZE];
-	SClientID(): uuid{DEF_VAL} {}
+	SClientID() : uuid{ DEF_VAL } {}
 
-	bool operator==(SClientID& otherID)
-	{
+	bool operator==(const SClientID& otherID) {
 		for (size_t i = 0; i < CLIENT_ID_SIZE; ++i)
 			if (uuid[i] != otherID.uuid[i])
 				return false;
 		return true;
 	}
-	bool operator!=(SClientID& otherID)
-	{
+	
+	bool operator!=(const SClientID& otherID) {
 		return !(*this == otherID);
 	}
 };
@@ -76,31 +76,19 @@ struct SClientID
 struct SClientName
 {
 	uint8_t name[CLIENT_NAME_SIZE];  // DEF_VAL terminated.
-	SClientName(): name{ '\0' } {}
+	SClientName() : name{ '\0' } {}
 };
 
 struct SPublicKey
 {
-	uint8_t publicKey[CLIENT_PUBLIC_KEY_SIZE];
-	SPublicKey(): publicKey{ DEF_VAL } {}
+	uint8_t publicKey[PUBLIC_KEY_SIZE];
+	SPublicKey() : publicKey{ DEF_VAL } {}
 };
 
-struct SClientIDName
+struct SSymmetricKey
 {
-	SClientID   clientId;
-	SClientName clientName;
-};
-
-struct SClientIDPublicKey
-{
-	SClientID   clientId;
-	SPublicKey  clientPublicKey;
-};
-
-struct SClientNamePublicKey
-{
-	SClientName clientName;
-	SPublicKey  clientPublicKey;
+	uint8_t symmetricKey[SYMMETRIC_KEY_SIZE];
+	SSymmetricKey() : symmetricKey{ DEF_VAL } {}
 };
 
 struct SRequestHeader
@@ -122,8 +110,12 @@ struct SResponseHeader
 
 struct SRequestRegistration
 {
-	SRequestHeader       header;
-	SClientNamePublicKey payload;
+	SRequestHeader header;
+	struct
+	{
+		SClientName clientName;
+		SPublicKey  clientPublicKey;
+	}payload;
 	SRequestRegistration() : header(REQUEST_REGISTRATION) {}
 };
 
@@ -142,7 +134,7 @@ struct SRequestClientsList
 struct SResponseClientsList
 {
 	SResponseHeader header;
-	/* variable SClientIDName. */
+	/* variable { SClientID + SClientName } */
 };
 
 struct SRequestPublicKey
@@ -154,19 +146,23 @@ struct SRequestPublicKey
 
 struct SResponsePublicKey
 {
-	SResponseHeader    header;
-	SClientIDPublicKey payload;
+	SResponseHeader header;
+	struct
+	{
+		SClientID   clientId;
+		SPublicKey  clientPublicKey;
+	}payload;
 };
 
 struct SRequestSendMessage
 {
 	SRequestHeader header;
-	struct SPayloadHeaderSendMessage
+	struct SPayloadHeader
 	{
 		SClientID           clientId;   // destination client
 		const messageType_t messageType;
 		csize_t             contentSize;
-		SPayloadHeaderSendMessage(messageType_t type): messageType(type), contentSize(DEF_VAL) {}
+		SPayloadHeader(messageType_t type) : messageType(type), contentSize(DEF_VAL) {}
 	}payloadHeader;
 	/* variable payload */
 	SRequestSendMessage(messageType_t type) : header(REQUEST_SEND_MSG), payloadHeader(type){}
@@ -175,11 +171,11 @@ struct SRequestSendMessage
 struct SResponseMessageSent
 {
 	SResponseHeader header;
-	struct SPayloadMessageSent
+	struct SPayload
 	{
 		SClientID   clientId;   // destination client
 		messageID_t messageId;
-		SPayloadMessageSent() : messageId(DEF_VAL) {}
+		SPayload() : messageId(DEF_VAL) {}
 	}payload;
 };
 

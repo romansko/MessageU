@@ -167,39 +167,41 @@ bool CClientLogic::parseClientInfo()
 	return true;
 }
 
-std::string CClientLogic::getClientId(const std::string& username) const
+/**
+ * Given a username, get a client ID from clients list.
+ */
+bool CClientLogic::getClientId(const std::string& username, SClientID& clientID) const
 {
+	if (username.empty())
+		return false;
+	
 	if (username == _username)
-		return hex(_clientID.uuid, sizeof(_clientID.uuid));
-	const auto it = std::find_if(_usersList.begin(), _usersList.end(),
-		[&username](const std::pair<std::string, std::string>& client) {
-			return (client.second == username);
-		});
-	return (it == _usersList.end()) ? "" : it->first;
-}
-
-bool CClientLogic::getClientId(const std::string& username, SClientID& clientId) const
-{
-	std::string userID = getClientId(username);
-	if (userID.empty())
-		return false;
-	userID = unhex(userID);
-	const char* unhexed = userID.c_str();
-	if (strlen(unhexed) != sizeof(clientId.uuid))
-		return false;
-	memcpy(clientId.uuid, unhexed, sizeof(clientId.uuid));
-	return true;
+	{
+		clientID = _clientID;  // return self ID.
+		return true;
+	}
+	
+	for (const SClient& client : _clients)
+	{
+		if (username == client.username)
+		{
+			clientID = client.id;
+			return true;
+		}
+	}
+	
+	return false; // clientID invalid.
 }
 
 /**
  * Copy usernames into vector & sort them alphabetically.
- * If _usersList is empty, an empty vector will be returned.
+ * If _clients is empty, an empty vector will be returned.
  */
 std::vector<std::string> CClientLogic::getUsernames() const
 {
-	std::vector<std::string> usernames(_usersList.size());
-	std::transform(_usersList.begin(), _usersList.end(), usernames.begin(),
-		[](const std::pair<std::string, std::string>& client) { return client.second; });
+	std::vector<std::string> usernames(_clients.size());
+	std::transform(_clients.begin(), _clients.end(), usernames.begin(),
+		[](const SClient& client) { return client.username; });
 	std::sort(usernames.begin(), usernames.end());
 	return usernames;
 }
@@ -357,6 +359,58 @@ bool CClientLogic::receiveUnknownPayload(const EResponseCode expectedCode, uint8
 	return true;
 }
 
+bool CClientLogic::setClientPublicKey(const SClientID& clientID, const SPublicKey& publicKey)
+{
+	for (SClient& client : _clients)
+	{
+		if (client.id == clientID)
+		{
+			client.publicKey = publicKey;
+			return true;
+		}
+	}
+	return false;
+}
+
+bool CClientLogic::getClientPublicKey(const SClientID& clientID, SPublicKey& publicKey)
+{
+	for (SClient& client : _clients)
+	{
+		if (client.id == clientID)
+		{
+			publicKey = client.publicKey;
+			return true;
+		}
+	}
+	return false;  // publicKey invalid.
+}
+
+bool CClientLogic::setClientSymmetricKey(const SClientID& clientID, const SSymmetricKey& symmetricKey)
+{
+	for (SClient& client : _clients)
+	{
+		if (client.id == clientID)
+		{
+			client.symmetricKey = symmetricKey;
+			return true;
+		}
+	}
+	return false;
+}
+
+bool CClientLogic::getClientSymmetricKey(const SClientID& clientID, SSymmetricKey& symmetricKey)
+{
+	for (SClient& client : _clients)
+	{
+		if (client.id == clientID)
+		{
+			symmetricKey = client.symmetricKey;
+			return true;
+		}
+	}
+	return false;  // publicKey invalid.
+}
+
 
 /**
  * Register client via the server.
@@ -385,7 +439,7 @@ bool CClientLogic::registerClient(const std::string& username)
 	delete _rsaDecryptor;
 	_rsaDecryptor = new RSAPrivateWrapper();
 	const auto publicKey = _rsaDecryptor->getPublicKey();
-	if (publicKey.size() != CLIENT_PUBLIC_KEY_SIZE)
+	if (publicKey.size() != PUBLIC_KEY_SIZE)
 	{
 		clearLastError();
 		_lastError << "Invalid public key length!";
@@ -426,8 +480,15 @@ bool CClientLogic::registerClient(const std::string& username)
 bool CClientLogic::requestClientsList()
 {
 	SRequestClientsList request;
-	uint8_t* payload = nullptr;
+	uint8_t* payload   = nullptr;
+	uint8_t* ptr       = nullptr;
 	size_t payloadSize = 0;
+	size_t parsedBytes = 0;
+	struct
+	{
+		SClientID   clientId;
+		SClientName clientName;
+	}client;
 	
 	request.header.clientId = _clientID;
 	if (!_socketHandler.connect())
@@ -456,7 +517,7 @@ bool CClientLogic::requestClientsList()
 		_lastError << "Server has no users registered. Empty Clients list.";
 		return false;
 	}
-	if (payloadSize % sizeof(SClientIDName) != 0)
+	if (payloadSize % sizeof(client) != 0)
 	{
 		_socketHandler.close();
 		clearLastError();
@@ -465,30 +526,25 @@ bool CClientLogic::requestClientsList()
 		return false;
 	}
 	_socketHandler.close();
-	uint8_t* ptr = payload;
-	size_t parsedBytes = 0;
-	SClientIDName client;
-	_usersList.clear();
+	ptr = payload;
+	_clients.clear();
 	while (parsedBytes < payloadSize)
 	{
-		memcpy(&client, ptr, sizeof(SClientIDName));
-		ptr += sizeof(SClientIDName);
-		parsedBytes += sizeof(SClientIDName);
+		memcpy(&client, ptr, sizeof(client));
+		ptr += sizeof(client);
+		parsedBytes += sizeof(client);
 		client.clientName.name[sizeof(client.clientName.name) - 1] = '\0'; // just in case..
-		const std::string name = reinterpret_cast<char*>(client.clientName.name);
-		const std::string clientID = hex(client.clientId.uuid, sizeof(client.clientId.uuid));
-		_usersList.insert(std::pair<std::string, std::string>(clientID, name));
+		_clients.push_back({ client.clientId, reinterpret_cast<char*>(client.clientName.name) });
 	}
 	delete[] payload;
 	return true;
 }
 
-bool CClientLogic::requestClientPublicKey(const std::string& username, std::string& publicKey)
+bool CClientLogic::requestClientPublicKey(const std::string& username)
 {
 	SRequestPublicKey  request;
 	SResponsePublicKey response;
 	request.header.clientId = _clientID;
-	publicKey = "";
 	
 	if (!getClientId(username, request.payload))
 	{
@@ -515,8 +571,14 @@ bool CClientLogic::requestClientPublicKey(const std::string& username, std::stri
 		_lastError << "Unexpected clientID was received.";
 		return false;
 	}
-	
-	publicKey = hex(response.payload.clientPublicKey.publicKey, sizeof(response.payload.clientPublicKey.publicKey));
+
+	// Set public key.
+	if (!setClientPublicKey(response.payload.clientId, response.payload.clientPublicKey))
+	{
+		clearLastError();
+		_lastError << "Couldn't assign public key for user " << username << ". ClientID was not found. Please try retrieve users list again..";
+		return false;
+	}
 	return true;
 }
 

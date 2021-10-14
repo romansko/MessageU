@@ -74,7 +74,7 @@ std::string CClientMenu::readUserInput(const std::string& description) const
 /**
  * Get menu option. valid EOption will succeed.
  */
-CClientMenu::CMenuOption CClientMenu::getMenuOption(CMenuOption::EOption val) const
+CClientMenu::CMenuOption CClientMenu::getMenuOption(const CMenuOption::EOption val) const
 {
 	const auto it = std::find_if(_menuOptions.begin(), _menuOptions.end(),
 		[&val](auto& opt) { return val == opt.getValue(); });
@@ -163,19 +163,15 @@ void CClientMenu::handleUserChoice()
 	case CMenuOption::MENU_REQ_PUBLIC_KEY:
 	{
 		const auto username = readUserInput("Please type a username..");
-		std::string hexifiedKey;
-		success = _clientLogic.requestClientPublicKey(username, hexifiedKey);
+		if (username == _clientLogic.getSelfUsername())
+		{
+			std::cout << _clientLogic.getSelfUsername() << ", your key is stored in the system already. " << std::endl;
+			return;
+		}
+		success = _clientLogic.requestClientPublicKey(username);
 		if (success)
 		{
-			if (username == _clientLogic.getSelfUsername())
-			{
-				std::cout << _clientLogic.getSelfUsername() << ", your key is: " << std::endl;
-			}
-			else
-			{
-				std::cout << username << "'s public key is " << std::endl;
-			}
-			std::cout << hexifiedKey << std::endl;
+			std::cout << username << "'s public key was retrieved successfully." << std::endl;
 		}
 		break;
 	}
@@ -201,6 +197,8 @@ void CClientMenu::handleUserChoice()
 	}
 	case CMenuOption::MENU_SEND_SYM_KEY:
 	{
+		const auto username = readUserInput("Please type a username..");
+			
 		std::cout << "UNIMPLEMENTED" << std::endl;
 		break;
 	}
