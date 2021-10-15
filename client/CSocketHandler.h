@@ -26,10 +26,13 @@ public:
 	CSocketHandler& operator=(const CSocketHandler& other) = delete;
 	CSocketHandler& operator=(CSocketHandler&& other) noexcept = delete;
 
-	friend std::ostream& operator<<(std::ostream& os, const CSocketHandler& socket)
-	{
-		os << socket._address << ':' << socket._port;
+	friend std::ostream& operator<<(std::ostream& os, const CSocketHandler* socket) {
+		if (socket != nullptr)
+			os << socket->_address << ':' << socket->_port;
 		return os;
+	}
+	friend std::ostream& operator<<(std::ostream& os, const CSocketHandler& socket) {
+		return operator<<(os, &socket);
 	}
 
 	// validations

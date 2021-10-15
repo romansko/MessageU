@@ -51,7 +51,7 @@ int rsa_example()
 
 	// 3. create an RSA encryptor
 	RSAPublicWrapper rsapub(pubkey);
-	std::string cipher = rsapub.encrypt((const char*)plain, sizeof(plain));	// you can encrypt a const char* or an std::string 
+	std::string cipher = rsapub.encrypt(plain, sizeof(plain));	// you can encrypt a const char* or an std::string 
 	std::cout << "cipher:" << std::endl;
 	std::cout << CClientLogic::hex(cipher) << std::endl;	// print binary data nicely
 

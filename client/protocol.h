@@ -45,13 +45,13 @@ enum EResponseCode
 	RESPONSE_ERROR         = 9000    // payload invalid. payloadSize = 0.
 };
 
-enum EMessageType
+enum class EMessageType
 {
 	MSG_INVALID = DEF_VAL,
 	MSG_SYMMETRIC_KEY_REQUEST,   // content invalid. contentSize = 0.
-	MSG_SYMMETRIC_KEY,           // content = symmetric key encrypted by destination client's public key.
-	MSG_ENCRYPTED,                // content = encrypted message by symmetric key.
-	MSG_FILE                    // content = encrypted file by symmetric key.
+	MSG_SYMMETRIC_KEY_SEND,      // content = symmetric key encrypted by destination client's public key.
+	MSG_TEXT,                    // content = encrypted message by symmetric key.
+	MSG_FILE                     // content = encrypted file by symmetric key.
 };
 
 #pragma pack(push, 1)
@@ -97,7 +97,8 @@ struct SRequestHeader
 	const version_t version;
 	const code_t    code;
 	csize_t         payloadSize;
-	SRequestHeader(code_t reqCode) : version(CLIENT_VERSION), code(reqCode), payloadSize(DEF_VAL) {}
+	SRequestHeader(const code_t reqCode) : version(CLIENT_VERSION), code(reqCode), payloadSize(DEF_VAL) {}
+	SRequestHeader(const SClientID& id, const code_t reqCode) : clientId(id), version(CLIENT_VERSION), code(reqCode), payloadSize(DEF_VAL) {}
 };
 
 struct SResponseHeader
@@ -162,10 +163,9 @@ struct SRequestSendMessage
 		SClientID           clientId;   // destination client
 		const messageType_t messageType;
 		csize_t             contentSize;
-		SPayloadHeader(messageType_t type) : messageType(type), contentSize(DEF_VAL) {}
+		SPayloadHeader(const messageType_t type) : messageType(type), contentSize(DEF_VAL) {}
 	}payloadHeader;
-	/* variable payload */
-	SRequestSendMessage(messageType_t type) : header(REQUEST_SEND_MSG), payloadHeader(type){}
+	SRequestSendMessage(const SClientID& id, const messageType_t type) : header(id, REQUEST_SEND_MSG), payloadHeader(type) {}
 };
 
 struct SResponseMessageSent

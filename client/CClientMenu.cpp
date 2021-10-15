@@ -188,7 +188,7 @@ void CClientMenu::handleUserChoice()
 	case CMenuOption::MENU_REQ_SYM_KEY:
 	{
 		const auto username = readUserInput("Please type a username..");
-		success = _clientLogic.requestSymmetricKey(username);
+		success = _clientLogic.sendMessage(username, EMessageType::MSG_SYMMETRIC_KEY_REQUEST);
 		if (success)
 		{
 			std::cout << "success" << std::endl;
@@ -198,13 +198,21 @@ void CClientMenu::handleUserChoice()
 	case CMenuOption::MENU_SEND_SYM_KEY:
 	{
 		const auto username = readUserInput("Please type a username..");
-			
-		std::cout << "UNIMPLEMENTED" << std::endl;
+		success = _clientLogic.sendMessage(username, EMessageType::MSG_SYMMETRIC_KEY_SEND);
+		if (success)
+		{
+			std::cout << "success" << std::endl;
+		}
 		break;
 	}
 	case CMenuOption::MENU_SEND_FILE:
 	{
-		std::cout << "UNIMPLEMENTED" << std::endl;
+		const auto username = readUserInput("Please type a username..");
+		success = _clientLogic.sendMessage(username, EMessageType::MSG_SYMMETRIC_KEY_SEND);
+		if (success)
+		{
+			std::cout << "success" << std::endl;
+		}
 		break;
 	}
 	default:  /* Can't happen. Was validated in readValidateUserChoice. */
