@@ -47,11 +47,10 @@ enum EResponseCode
 
 enum class EMessageType
 {
-	MSG_INVALID = DEF_VAL,
-	MSG_SYMMETRIC_KEY_REQUEST,   // content invalid. contentSize = 0.
-	MSG_SYMMETRIC_KEY_SEND,      // content = symmetric key encrypted by destination client's public key.
-	MSG_TEXT,                    // content = encrypted message by symmetric key.
-	MSG_FILE                     // content = encrypted file by symmetric key.
+	MSG_SYMMETRIC_KEY_REQUEST = 1,   // content invalid. contentSize = 0.
+	MSG_SYMMETRIC_KEY_SEND    = 2,   // content = symmetric key encrypted by destination client's public key.
+	MSG_TEXT                  = 3,   // content = encrypted message by symmetric key.
+	MSG_FILE                  = 4    // content = encrypted file by symmetric key.
 };
 
 #pragma pack(push, 1)

@@ -49,7 +49,7 @@ public:
 	bool registerClient(const std::string& username);
 	bool requestClientsList();
 	bool requestClientPublicKey(const std::string& username);
-	bool sendMessage(const std::string& username, const EMessageType type, void* data = nullptr);
+	bool sendMessage(const std::string& username, const EMessageType type, const std::string data = "");
 
 private:
 	void clearLastError();

@@ -90,7 +90,7 @@
       <SDLCheck>true</SDLCheck>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;_WIN32_WINNT=0x0A00;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
-      <AdditionalIncludeDirectories>$(ProjectDir)\cryptopp_wrapper\;D:\cryptopp850\;D:\boost_1_77_0\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\header\;D:\cryptopp850\;D:\boost_1_77_0\;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -145,28 +145,28 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="CClientLogic.cpp" />
-    <ClCompile Include="CClientMenu.cpp" />
-    <ClCompile Include="CFileHandler.cpp" />
-    <ClCompile Include="cryptopp_wrapper\AESWrapper.cpp" />
-    <ClCompile Include="cryptopp_wrapper\Base64Wrapper.cpp" />
-    <ClCompile Include="cryptopp_wrapper\RSAWrapper.cpp" />
-    <ClCompile Include="CSocketHandler.cpp" />
-    <ClCompile Include="main.cpp" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClInclude Include="CClientLogic.h" />
-    <ClInclude Include="CClientMenu.h" />
-    <ClInclude Include="CFileHandler.h" />
-    <ClInclude Include="cryptopp_wrapper\AESWrapper.h" />
-    <ClInclude Include="cryptopp_wrapper\Base64Wrapper.h" />
-    <ClInclude Include="cryptopp_wrapper\RSAWrapper.h" />
-    <ClInclude Include="CSocketHandler.h" />
-    <ClInclude Include="protocol.h" />
-  </ItemGroup>
-  <ItemGroup>
     <None Include="me.info" />
     <None Include="server.info" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="header\AESWrapper.h" />
+    <ClInclude Include="header\Base64Wrapper.h" />
+    <ClInclude Include="header\CClientLogic.h" />
+    <ClInclude Include="header\CClientMenu.h" />
+    <ClInclude Include="header\CFileHandler.h" />
+    <ClInclude Include="header\CSocketHandler.h" />
+    <ClInclude Include="header\protocol.h" />
+    <ClInclude Include="header\RSAWrapper.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="src\AESWrapper.cpp" />
+    <ClCompile Include="src\Base64Wrapper.cpp" />
+    <ClCompile Include="src\CClientLogic.cpp" />
+    <ClCompile Include="src\CClientMenu.cpp" />
+    <ClCompile Include="src\CFileHandler.cpp" />
+    <ClCompile Include="src\CSocketHandler.cpp" />
+    <ClCompile Include="src\main.cpp" />
+    <ClCompile Include="src\RSAWrapper.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -182,7 +182,13 @@ void CClientMenu::handleUserChoice()
 	}
 	case CMenuOption::MENU_SEND_MSG:
 	{
-		std::cout << "UNIMPLEMENTED" << std::endl;
+		const auto username = readUserInput("Please type a username..");
+		const auto message = readUserInput("Enter message: ");
+		success = _clientLogic.sendMessage(username, EMessageType::MSG_TEXT, message);
+		if (success)
+		{
+			std::cout << "success" << std::endl;
+		}
 		break;
 	}
 	case CMenuOption::MENU_REQ_SYM_KEY:
@@ -208,7 +214,8 @@ void CClientMenu::handleUserChoice()
 	case CMenuOption::MENU_SEND_FILE:
 	{
 		const auto username = readUserInput("Please type a username..");
-		success = _clientLogic.sendMessage(username, EMessageType::MSG_SYMMETRIC_KEY_SEND);
+		const auto message = readUserInput("Enter filepath: ");
+		success = _clientLogic.sendMessage(username, EMessageType::MSG_FILE, message);
 		if (success)
 		{
 			std::cout << "success" << std::endl;

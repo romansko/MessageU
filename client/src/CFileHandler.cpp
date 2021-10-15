@@ -21,6 +21,7 @@ CFileHandler::~CFileHandler()
 	delete _fileStream;
 }
 
+
 /**
  * Open a file for read/write. Create folders in filepath if do not exist.
  * Relative paths not supported!
@@ -73,7 +74,7 @@ void CFileHandler::close()
 /**
  * Read bytes from fs to dest.
  */
-bool CFileHandler::read(uint8_t* const dest, uint32_t bytes) const
+bool CFileHandler::read(uint8_t* const dest, size_t bytes) const
 {
 	if (_fileStream == nullptr || dest == nullptr || bytes == 0)
 		return false;
@@ -92,7 +93,7 @@ bool CFileHandler::read(uint8_t* const dest, uint32_t bytes) const
 /**
  * Write given bytes from src to fs.
  */
-bool CFileHandler::write(const uint8_t* const src, const uint32_t bytes) const
+bool CFileHandler::write(const uint8_t* const src, const size_t bytes) const
 {
 	try
 	{
@@ -106,27 +107,6 @@ bool CFileHandler::write(const uint8_t* const src, const uint32_t bytes) const
 		return false;
 	}
 }
-
-
-/**
- * Check whether a file exists given a filePath.
- */
-bool CFileHandler::fileExists(const std::string& filePath)
-{
-	if (filePath.empty())
-		return false;
-
-	try
-	{
-		const std::ifstream fs(filePath);
-		return (!fs.fail());
-	}
-	catch (...)
-	{
-		return false;
-	}
-}
-
 
 
 /**
@@ -178,7 +158,7 @@ bool CFileHandler::writeLine(const std::string& line) const
 /**
  * Calculate the file size which is opened by fs.
  */
-uint32_t CFileHandler::size() const
+size_t CFileHandler::size() const
 {
 	if (_fileStream == nullptr)
 		return 0;
@@ -190,10 +170,33 @@ uint32_t CFileHandler::size() const
 		if ((size <= 0) || (size > UINT32_MAX))    // do not support more than uint32 max size files. (up to 4GB).
 			return 0;
 		_fileStream->seekg(cur);    // restore position
-		return static_cast<uint32_t>(size);
+		return static_cast<size_t>(size);
 	}
 	catch (...)
 	{
 		return 0;
 	}
+}
+
+/**
+ * Open and read file.
+ * Caller is responsible for freeing allocated memory.
+ */
+bool CFileHandler::readAtOnce(const std::string& filepath, uint8_t*& file, size_t& bytes)
+{
+	if (!open(filepath))
+		return false;
+	
+	bytes = size();
+	if (bytes == 0)
+		return false;
+
+	file = new uint8_t[bytes];
+	if (!read(file, bytes))
+	{
+		delete[] file;
+		return false;
+	}
+	close();
+	return true;
 }

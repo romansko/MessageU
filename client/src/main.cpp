@@ -1,18 +1,15 @@
 
+#include <iostream>
 #include "Base64Wrapper.h"
 #include "RSAWrapper.h"
 #include "AESWrapper.h"
-
-#include <iostream>
-#include <boost/algorithm/string/trim.hpp>  // for trimming strings
-
 #include "CClientMenu.h"
 
 int aes_example()
 {
 	std::cout << std::endl << std::endl << "----- AES EXAMPLE -----" << std::endl << std::endl;
 
-	std::string plaintext = "Once upon a time, a plain text dreamed to become a cipher";
+	const std::string plaintext = "Once upon a time, a plain text dreamed to become a cipher";
 	std::cout << "Plain:" << std::endl << plaintext << std::endl;
 
 	// 1. Generate a key and initialize an AESWrapper. You can also create AESWrapper with default constructor which will automatically generates a random key.
@@ -20,12 +17,12 @@ int aes_example()
 	AESWrapper aes(AESWrapper::GenerateKey(key, AESWrapper::DEFAULT_KEYLENGTH), AESWrapper::DEFAULT_KEYLENGTH);
 
 	// 2. encrypt a message (plain text)
-	std::string ciphertext = aes.encrypt(plaintext.c_str(), plaintext.length());
+	const std::string ciphertext = aes.encrypt(reinterpret_cast<const uint8_t*>(plaintext.c_str()), plaintext.length());
 	std::cout << "Cipher:" << std::endl;
-	std::cout << CClientLogic::hex(ciphertext.c_str()) << std::endl;;	// print binary data nicely
+	std::cout << CClientLogic::hex(ciphertext) << std::endl;;	// print binary data nicely
 
 	// 3. decrypt a message (cipher text)
-	std::string decrypttext = aes.decrypt(ciphertext.c_str(), ciphertext.length());
+	const std::string decrypttext = aes.decrypt(reinterpret_cast<const uint8_t*>(ciphertext.c_str()), ciphertext.length());
 	std::cout << "Decrypted:" << std::endl << decrypttext << std::endl;
 
 	return 0;
@@ -72,9 +69,6 @@ int rsa_example()
 
 int main(int argc, char* argv[])
 {
-	//aes_example();
-    //rsa_example();
-
 	CClientMenu menu;
 	menu.initialize();
 	
@@ -82,7 +76,7 @@ int main(int argc, char* argv[])
 	{
 		menu.display();
 		menu.handleUserChoice();
-		system("pause"); // todo remove
+		system("pause");
 	}
 	
 	return 0;

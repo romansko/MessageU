@@ -10,11 +10,15 @@
 #include "CFileHandler.h"
 #include "CSocketHandler.h"
 
+std::ostream& operator<<(std::ostream& os, const EMessageType& type)
+{
+	os << static_cast<messageType_t>(type);
+	return os;
+}
+
+
 CClientLogic::CClientLogic() : _fileHandler(nullptr), _socketHandler(nullptr), _rsaDecryptor(nullptr)
 {
-	// Validate protocol's key size vs. Crypto utilities.
-	assert(AESWrapper::DEFAULT_KEYLENGTH == SYMMETRIC_KEY_SIZE);
-	assert(RSAPublicWrapper::KEYSIZE == PUBLIC_KEY_SIZE);
 	_fileHandler   = new CFileHandler();
 	_socketHandler = new CSocketHandler();
 }
@@ -24,12 +28,6 @@ CClientLogic::~CClientLogic()
 	delete _fileHandler;
 	delete _socketHandler;
 	delete _rsaDecryptor;
-}
-
-std::ostream& operator<<(std::ostream& os, const EMessageType& type)
-{
-	os << static_cast<messageType_t>(type);
-	return os;
 }
 
 std::string CClientLogic::hex(const std::string& str)
@@ -609,13 +607,12 @@ bool CClientLogic::requestClientPublicKey(const std::string& username)
 }
 
 
-bool CClientLogic::sendMessage(const std::string& username, const EMessageType type, void* data)
+bool CClientLogic::sendMessage(const std::string& username, const EMessageType type, const std::string data)
 {
 	SRequestSendMessage  request(_self.id, static_cast<messageType_t>(type));
 	SResponseMessageSent response;
 	SSymmetricKey symKey;
-	uint8_t* content = nullptr, *msgToSend = nullptr;
-	size_t msgSize = 0;
+	uint8_t* content = nullptr;
 
 	if (!getClientId(username, request.payloadHeader.clientId))
 	{
@@ -628,7 +625,7 @@ bool CClientLogic::sendMessage(const std::string& username, const EMessageType t
 	{
 	case EMessageType::MSG_SYMMETRIC_KEY_REQUEST:
 	{
-		/* Do nothing */
+		/* No content */
 		break;
 	}
 	case EMessageType::MSG_SYMMETRIC_KEY_SEND:
@@ -648,24 +645,52 @@ bool CClientLogic::sendMessage(const std::string& username, const EMessageType t
 	}
 	case EMessageType::MSG_TEXT:
 	{
-		std::cout << "unimp MSG_TEXT" << std::endl;
+		if (data.empty())
+		{
+			clearLastError();
+			_lastError << "No text was provided";
+			return false;
+		}
+		if (!getClientSymmetricKey(request.payloadHeader.clientId, symKey))
+			return false;   // error described within.
+		AESWrapper aes(AESWrapper::GenerateKey(symKey.symmetricKey, SYMMETRIC_KEY_SIZE), SYMMETRIC_KEY_SIZE);
+		const std::string encrypted = aes.encrypt(reinterpret_cast<const uint8_t*>(data.c_str()), data.size());
+		request.payloadHeader.contentSize = encrypted.size();
+		content = new uint8_t[request.payloadHeader.contentSize];
+		memcpy(content, encrypted.c_str(), request.payloadHeader.contentSize);
 		break;
 	}
 	case EMessageType::MSG_FILE:
 	{
-		std::cout << "unimp MSG_FILE" << std::endl;
+		if (!getClientSymmetricKey(request.payloadHeader.clientId, symKey))
+			return false;   // error described within.
+		AESWrapper aes(AESWrapper::GenerateKey(symKey.symmetricKey, SYMMETRIC_KEY_SIZE), SYMMETRIC_KEY_SIZE);
+			
+		if (data.empty())
+		{
+			clearLastError();
+			_lastError << "No filepath was provided";
+			return false;
+		}
+		uint8_t* file;
+		size_t bytes;
+		if(!_fileHandler->readAtOnce(data, file, bytes))
+		{
+			clearLastError();
+			_lastError << "Couldn't read file " << data;
+			return false;
+		}
+		const std::string encrypted = aes.encrypt(file, bytes);
+		request.payloadHeader.contentSize = encrypted.size();
+		content = new uint8_t[request.payloadHeader.contentSize];
+		memcpy(content, encrypted.c_str(), request.payloadHeader.contentSize);
 		break;
-	}
-	case EMessageType::MSG_INVALID:
-	default:
-	{
-		clearLastError();
-		_lastError << "Invalid message type: " << type;
-		return false;
 	}
 	}
 
 	// prepare message to send
+	size_t msgSize;
+	uint8_t* msgToSend;
 	request.header.payloadSize = sizeof(request.payloadHeader) + request.payloadHeader.contentSize;
 	if (content == nullptr)
 	{
