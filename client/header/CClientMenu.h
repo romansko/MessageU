@@ -23,30 +23,29 @@ private:
 	class CMenuOption
 	{
 	public:
-		static const int INVALID_CHOICE = -1;
-		enum EOption
+		enum class EOption
 		{
-			MENU_REGISTER = 10,
+			MENU_REGISTER        = 10,
 			MENU_REQ_CLIENT_LIST = 20,
-			MENU_REQ_PUBLIC_KEY = 30,
+			MENU_REQ_PUBLIC_KEY  = 30,
 			MENU_REQ_PENDING_MSG = 40,
-			MENU_SEND_MSG = 50,
-			MENU_REQ_SYM_KEY = 51,
-			MENU_SEND_SYM_KEY = 52,
-			MENU_SEND_FILE = 53,
-			MENU_EXIT = 0
+			MENU_SEND_MSG        = 50,
+			MENU_REQ_SYM_KEY     = 51,
+			MENU_SEND_SYM_KEY    = 52,
+			MENU_SEND_FILE       = 53,
+			MENU_EXIT            = 0
 		};
 
 	private:
-		const EOption     _value;
-		const bool        _registration;  // indicates whether registration is required before option usage.
-		const std::string _description;
+		EOption     _value;
+		bool        _registration;  // indicates whether registration is required before option usage.
+		std::string _description;
 
 	public:
-		
+		CMenuOption() : _value(EOption::MENU_EXIT), _registration(false){}
 		CMenuOption(const EOption val, const bool reg, std::string desc) : _value(val), _registration(reg), _description(std::move(desc)) {}
 		friend std::ostream& operator<<(std::ostream& os, const CMenuOption& opt) {
-			os << std::setw(2) << std::to_string(opt._value) << ") " << opt._description;
+			os << std::setw(2) << static_cast<uint32_t>(opt._value) << ") " << opt._description;
 			return os;
 		}
 		EOption getValue() const { return _value; }
@@ -54,6 +53,7 @@ private:
 		std::string getDescription() const { return _description; }
 	};
 
+private:
 	const std::vector<CMenuOption> _menuOptions {
 		{ CMenuOption::EOption::MENU_REGISTER,        false, "Register" },
 		{ CMenuOption::EOption::MENU_REQ_CLIENT_LIST, true,  "Request for client list" },
@@ -69,8 +69,7 @@ private:
 	void clientStop(const std::string& error);
 	void clearMenu() const;
 	std::string readUserInput(const std::string& description = "") const;
-	CMenuOption getMenuOption(const CMenuOption::EOption val) const;
-	int readValidateUserChoice() const;
+	bool getMenuOption(CMenuOption& menuOption) const;
 
 
 	CClientLogic _clientLogic;

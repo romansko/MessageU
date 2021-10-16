@@ -11,9 +11,7 @@
 #include <boost/algorithm/string/trim.hpp>
 
 
-CClientMenu::CClientMenu() : _registered(false)
-{
-}
+CClientMenu::CClientMenu() : _registered(false) {}
 
 /**
  * Print error and exit client.
@@ -71,27 +69,22 @@ std::string CClientMenu::readUserInput(const std::string& description) const
 	return input;
 }
 
-/**
- * Get menu option. valid EOption will succeed.
- */
-CClientMenu::CMenuOption CClientMenu::getMenuOption(const CMenuOption::EOption val) const
-{
-	const auto it = std::find_if(_menuOptions.begin(), _menuOptions.end(),
-		[&val](auto& opt) { return val == opt.getValue(); });
-	return *it;
-}
 
 /**
  * Read & Validate user's input according to main menu options.
- * Return as int because of INVALID_CHOICE usage.
+ * If valid option, assign menuOption.
  */
-int CClientMenu::readValidateUserChoice() const
+bool CClientMenu::getMenuOption(CMenuOption& menuOption) const
 {
 	const std::string input = readUserInput();
-	
 	const auto it = std::find_if(_menuOptions.begin(), _menuOptions.end(),
-		[&input](auto& opt) { return (input == std::to_string(opt.getValue())); });
-	return (it == _menuOptions.end()) ? CMenuOption::INVALID_CHOICE : it->getValue();
+		[&input](auto& opt) { return (input == std::to_string(static_cast<uint32_t>(opt.getValue()))); });
+	if (it == _menuOptions.end())
+	{
+		return false; // menuOption invalid.
+	}
+	menuOption = *it;
+	return true;
 }
 
 
@@ -100,30 +93,29 @@ int CClientMenu::readValidateUserChoice() const
  */
 void CClientMenu::handleUserChoice()
 {
-	bool success = true;
-	int userChoice = readValidateUserChoice();
-	while (userChoice == CMenuOption::INVALID_CHOICE)
+	CMenuOption menuOption;
+	bool success = getMenuOption(menuOption);
+	while (!success)
 	{
 		std::cout << "Invalid input. Please try again.." << std::endl;
-		userChoice = readValidateUserChoice();
+		success = getMenuOption(menuOption);
 	}
 
 	clearMenu();
-	const auto menuOption = getMenuOption(static_cast<CMenuOption::EOption>(userChoice));
 	std::cout << menuOption.getDescription() << std::endl;
 	if (!_registered && menuOption.requireRegistration())
 	{
 		std::cout << "You must register first!" << std::endl;
 		return;
 	}
-	switch (userChoice)
+	switch (menuOption.getValue())
 	{
-	case CMenuOption::MENU_EXIT:
+	case CMenuOption::EOption::MENU_EXIT:
 	{
 		system("pause");
 		exit(0);
 	}
-	case CMenuOption::MENU_REGISTER:
+	case CMenuOption::EOption::MENU_REGISTER:
 	{
 		if (_registered)
 		{
@@ -139,7 +131,7 @@ void CClientMenu::handleUserChoice()
 		_registered = success;
 		break;
 	}
-	case CMenuOption::MENU_REQ_CLIENT_LIST:
+	case CMenuOption::EOption::MENU_REQ_CLIENT_LIST:
 	{
 		success = _clientLogic.requestClientsList();
 		if (success)
@@ -160,7 +152,7 @@ void CClientMenu::handleUserChoice()
 		}
 		break;
 	}
-	case CMenuOption::MENU_REQ_PUBLIC_KEY:
+	case CMenuOption::EOption::MENU_REQ_PUBLIC_KEY:
 	{
 		const auto username = readUserInput("Please type a username..");
 		if (username == _clientLogic.getSelfUsername())
@@ -175,12 +167,12 @@ void CClientMenu::handleUserChoice()
 		}
 		break;
 	}
-	case CMenuOption::MENU_REQ_PENDING_MSG:
+	case CMenuOption::EOption::MENU_REQ_PENDING_MSG:
 	{
 		std::cout << "UNIMPLEMENTED" << std::endl;
 		break;
 	}
-	case CMenuOption::MENU_SEND_MSG:
+	case CMenuOption::EOption::MENU_SEND_MSG:
 	{
 		const auto username = readUserInput("Please type a username..");
 		const auto message = readUserInput("Enter message: ");
@@ -191,7 +183,7 @@ void CClientMenu::handleUserChoice()
 		}
 		break;
 	}
-	case CMenuOption::MENU_REQ_SYM_KEY:
+	case CMenuOption::EOption::MENU_REQ_SYM_KEY:
 	{
 		const auto username = readUserInput("Please type a username..");
 		success = _clientLogic.sendMessage(username, EMessageType::MSG_SYMMETRIC_KEY_REQUEST);
@@ -201,7 +193,7 @@ void CClientMenu::handleUserChoice()
 		}
 		break;
 	}
-	case CMenuOption::MENU_SEND_SYM_KEY:
+	case CMenuOption::EOption::MENU_SEND_SYM_KEY:
 	{
 		const auto username = readUserInput("Please type a username..");
 		success = _clientLogic.sendMessage(username, EMessageType::MSG_SYMMETRIC_KEY_SEND);
@@ -211,7 +203,7 @@ void CClientMenu::handleUserChoice()
 		}
 		break;
 	}
-	case CMenuOption::MENU_SEND_FILE:
+	case CMenuOption::EOption::MENU_SEND_FILE:
 	{
 		const auto username = readUserInput("Please type a username..");
 		const auto message = readUserInput("Enter filepath: ");
@@ -220,10 +212,6 @@ void CClientMenu::handleUserChoice()
 		{
 			std::cout << "success" << std::endl;
 		}
-		break;
-	}
-	default:  /* Can't happen. Was validated in readValidateUserChoice. */
-	{
 		break;
 	}
 	}
