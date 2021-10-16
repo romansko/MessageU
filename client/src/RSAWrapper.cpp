@@ -1,9 +1,9 @@
 #include "RSAWrapper.h"
 
 
-RSAPublicWrapper::RSAPublicWrapper(const char* key, size_t length)
+RSAPublicWrapper::RSAPublicWrapper(const uint8_t* key, size_t length)
 {
-	CryptoPP::StringSource ss(reinterpret_cast<const CryptoPP::byte*>(key), length, true);
+	CryptoPP::StringSource ss((key), length, true);
 	_publicKey.Load(ss);
 }
 
@@ -25,9 +25,9 @@ std::string RSAPublicWrapper::getPublicKey() const
 	return key;
 }
 
-char* RSAPublicWrapper::getPublicKey(char* keyout, size_t length) const
+uint8_t* RSAPublicWrapper::getPublicKey(uint8_t* keyout, size_t length) const
 {
-	CryptoPP::ArraySink as(reinterpret_cast<CryptoPP::byte*>(keyout), length);
+	CryptoPP::ArraySink as((keyout), length);
 	_publicKey.Save(as);
 	return keyout;
 }
@@ -55,9 +55,9 @@ RSAPrivateWrapper::RSAPrivateWrapper()
 	_privateKey.Initialize(_rng, BITS);
 }
 
-RSAPrivateWrapper::RSAPrivateWrapper(const char* key, size_t length)
+RSAPrivateWrapper::RSAPrivateWrapper(const uint8_t* key, size_t length)
 {
-	CryptoPP::StringSource ss(reinterpret_cast<const CryptoPP::byte*>(key), length, true);
+	CryptoPP::StringSource ss((key), length, true);
 	_privateKey.Load(ss);
 }
 
@@ -79,9 +79,9 @@ std::string RSAPrivateWrapper::getPrivateKey() const
 	return key;
 }
 
-char* RSAPrivateWrapper::getPrivateKey(char* keyout, size_t length) const
+uint8_t* RSAPrivateWrapper::getPrivateKey(uint8_t* keyout, size_t length) const
 {
-	CryptoPP::ArraySink as(reinterpret_cast<CryptoPP::byte*>(keyout), length);
+	CryptoPP::ArraySink as((keyout), length);
 	_privateKey.Save(as);
 	return keyout;
 }
@@ -95,10 +95,10 @@ std::string RSAPrivateWrapper::getPublicKey() const
 	return key;
 }
 
-char* RSAPrivateWrapper::getPublicKey(char* keyout, size_t length) const
+uint8_t* RSAPrivateWrapper::getPublicKey(uint8_t* keyout, size_t length) const
 {
 	CryptoPP::RSAFunction publicKey(_privateKey);
-	CryptoPP::ArraySink as(reinterpret_cast<CryptoPP::byte*>(keyout), length);
+	CryptoPP::ArraySink as((keyout), length);
 	publicKey.Save(as);
 	return keyout;
 }
@@ -111,10 +111,10 @@ std::string RSAPrivateWrapper::decrypt(const std::string& cipher)
 	return decrypted;
 }
 
-std::string RSAPrivateWrapper::decrypt(const char* cipher, size_t length)
+std::string RSAPrivateWrapper::decrypt(const uint8_t* cipher, size_t length)
 {
 	std::string decrypted;
 	CryptoPP::RSAES_OAEP_SHA_Decryptor d(_privateKey);
-	CryptoPP::StringSource ss_cipher(reinterpret_cast<const CryptoPP::byte*>(cipher), length, true, new CryptoPP::PK_DecryptorFilter(_rng, d, new CryptoPP::StringSink(decrypted)));
+	CryptoPP::StringSource ss_cipher((cipher), length, true, new CryptoPP::PK_DecryptorFilter(_rng, d, new CryptoPP::StringSink(decrypted)));
 	return decrypted;
 }

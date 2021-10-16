@@ -13,7 +13,7 @@ int aes_example()
 	std::cout << "Plain:" << std::endl << plaintext << std::endl;
 
 	// 1. Generate a key and initialize an AESWrapper. You can also create AESWrapper with default constructor which will automatically generates a random key.
-	unsigned char key[AESWrapper::DEFAULT_KEYLENGTH];
+	uint8_t key[AESWrapper::DEFAULT_KEYLENGTH];
 	AESWrapper aes(AESWrapper::GenerateKey(key, AESWrapper::DEFAULT_KEYLENGTH), AESWrapper::DEFAULT_KEYLENGTH);
 
 	// 2. encrypt a message (plain text)
@@ -43,7 +43,7 @@ int rsa_example()
 	// 2. get the public key
 	std::string pubkey = rsapriv.getPublicKey();	// you can get it as std::string ...
 	
-	char pubkeybuff[RSAPublicWrapper::KEYSIZE]; 
+	uint8_t pubkeybuff[RSAPublicWrapper::KEYSIZE];
 	rsapriv.getPublicKey(pubkeybuff, RSAPublicWrapper::KEYSIZE);	// ...or as a char* buffer
 
 	// 3. create an RSA encryptor

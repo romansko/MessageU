@@ -14,12 +14,20 @@ class RSAPrivateWrapper;
 
 class CClientLogic
 {
+public:
+	
 	struct SClient
 	{
 		SClientID     id;
 		std::string   username;
 		SPublicKey    publicKey;
 		SSymmetricKey symmetricKey;
+	};
+
+	struct SMessage
+	{
+		std::string username; // source username
+		std::string content;
 	};
 
 public:
@@ -38,8 +46,8 @@ public:
 	
 	// inline getters
 	std::string getLastError() const { return _lastError.str(); }
-	std::string getSelfUsername()  const { return _self.username; }
-	SClientID   getSelfClientID()  const { return _self.id; }
+	std::string getSelfUsername() const { return _self.username; }
+	SClientID   getSelfClientID() const { return _self.id; }
 	
 	// client logic to be invoked by client menu.
 	bool parseServeInfo();
@@ -48,6 +56,7 @@ public:
 	std::vector<std::string> getUsernames() const;
 	bool registerClient(const std::string& username);
 	bool requestClientsList();
+	bool requestPendingMessages(std::vector<SMessage>& messages);
 	bool requestClientPublicKey(const std::string& username);
 	bool sendMessage(const std::string& username, const EMessageType type, const std::string data = "");
 
@@ -55,11 +64,12 @@ private:
 	void clearLastError();
 	bool storeClientInfo();
 	bool validateHeader(const SResponseHeader& header, const EResponseCode expectedCode);
-	bool receiveUnknownPayload(const EResponseCode expectedCode, uint8_t*& payload, size_t& size);
+	bool receiveUnknownPayload(const uint8_t* const request, const size_t reqSize, const EResponseCode expectedCode, uint8_t*& payload, size_t& size);
 	bool setClientPublicKey(const SClientID& clientID, const SPublicKey& publicKey);
 	bool getClientPublicKey(const SClientID& clientID, SPublicKey& publicKey);
 	bool setClientSymmetricKey(const SClientID& clientID, const SSymmetricKey& symmetricKey);
 	bool getClientSymmetricKey(const SClientID& clientID, SSymmetricKey& symmetricKey);
+	bool getClientUsername(const SClientID& clientID, std::string& username);
 
 	SClient              _self;           // self symmetric key invalid.
 	std::vector<SClient> _clients;

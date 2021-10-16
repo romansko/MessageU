@@ -45,7 +45,7 @@ enum EResponseCode
 	RESPONSE_ERROR         = 9000    // payload invalid. payloadSize = 0.
 };
 
-enum class EMessageType
+enum EMessageType
 {
 	MSG_SYMMETRIC_KEY_REQUEST = 1,   // content invalid. contentSize = 0.
 	MSG_SYMMETRIC_KEY_SEND    = 2,   // content = symmetric key encrypted by destination client's public key.
@@ -128,7 +128,7 @@ struct SResponseRegistration
 struct SRequestClientsList
 {
 	SRequestHeader header;
-	SRequestClientsList() : header(REQUEST_CLIENTS_LIST) {}
+	SRequestClientsList(const SClientID& id) : header(id, REQUEST_CLIENTS_LIST) {}
 };
 
 struct SResponseClientsList
@@ -141,7 +141,7 @@ struct SRequestPublicKey
 {
 	SRequestHeader header;
 	SClientID      payload;
-	SRequestPublicKey() : header(REQUEST_PUBLIC_KEY) {}
+	SRequestPublicKey(const SClientID& id) : header(id, REQUEST_PUBLIC_KEY) {}
 };
 
 struct SResponsePublicKey
@@ -181,7 +181,7 @@ struct SResponseMessageSent
 struct SRequestMessages
 {
 	SRequestHeader header;
-	SRequestMessages() : header(REQUEST_PENDING_MSG) {}
+	SRequestMessages(const SClientID& id) : header(id, REQUEST_PENDING_MSG) {}
 };
 
 

@@ -169,37 +169,43 @@ void CClientMenu::handleUserChoice()
 	}
 	case CMenuOption::EOption::MENU_REQ_PENDING_MSG:
 	{
-		std::cout << "UNIMPLEMENTED" << std::endl;
+		std::vector<CClientLogic::SMessage> messages;
+		success = _clientLogic.requestPendingMessages(messages);
+		if (success)
+		{
+			for (const auto& msg : messages)
+				std::cout << "From: " << msg.username << std::endl << "Content:" << std::endl << msg.content << std::endl;
+		}
 		break;
 	}
 	case CMenuOption::EOption::MENU_SEND_MSG:
 	{
 		const auto username = readUserInput("Please type a username..");
 		const auto message = readUserInput("Enter message: ");
-		success = _clientLogic.sendMessage(username, EMessageType::MSG_TEXT, message);
+		success = _clientLogic.sendMessage(username, MSG_TEXT, message);
 		if (success)
 		{
-			std::cout << "success" << std::endl;
+			std::cout << "Message was sent successfully" << std::endl;
 		}
 		break;
 	}
 	case CMenuOption::EOption::MENU_REQ_SYM_KEY:
 	{
 		const auto username = readUserInput("Please type a username..");
-		success = _clientLogic.sendMessage(username, EMessageType::MSG_SYMMETRIC_KEY_REQUEST);
+		success = _clientLogic.sendMessage(username, MSG_SYMMETRIC_KEY_REQUEST);
 		if (success)
 		{
-			std::cout << "success" << std::endl;
+			std::cout << "Symmetric key request was sent successfully" << std::endl;
 		}
 		break;
 	}
 	case CMenuOption::EOption::MENU_SEND_SYM_KEY:
 	{
 		const auto username = readUserInput("Please type a username..");
-		success = _clientLogic.sendMessage(username, EMessageType::MSG_SYMMETRIC_KEY_SEND);
+		success = _clientLogic.sendMessage(username, MSG_SYMMETRIC_KEY_SEND);
 		if (success)
 		{
-			std::cout << "success" << std::endl;
+			std::cout << "Symmetric key was sent successfully" << std::endl;
 		}
 		break;
 	}
@@ -207,10 +213,10 @@ void CClientMenu::handleUserChoice()
 	{
 		const auto username = readUserInput("Please type a username..");
 		const auto message = readUserInput("Enter filepath: ");
-		success = _clientLogic.sendMessage(username, EMessageType::MSG_FILE, message);
+		success = _clientLogic.sendMessage(username, MSG_FILE, message);
 		if (success)
 		{
-			std::cout << "success" << std::endl;
+			std::cout << "File was sent successfully" << std::endl;
 		}
 		break;
 	}
