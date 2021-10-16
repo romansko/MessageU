@@ -625,8 +625,10 @@ bool CClientLogic::requestPendingMessages(std::vector<SMessage>& messages)
 
 		if (!getClientUsername(header->clientId, message.username))
 		{
-			parsedBytes += header->messageSize;
-			continue; // username was not found. Skip to next message.
+			message.username = "Unknown client ID: ";
+			message.username.append(hex(header->clientId.uuid, sizeof(header->clientId.uuid)));
+			//parsedBytes += header->messageSize;
+			//continue; // username was not found. Skip to next message.
 		}
 		
 		switch(header->messageType)
@@ -674,10 +676,19 @@ bool CClientLogic::requestPendingMessages(std::vector<SMessage>& messages)
 			SSymmetricKey symKey;
 			if (getClientSymmetricKey(header->clientId, symKey))
 			{
-				AESWrapper aes(AESWrapper::GenerateKey(symKey.symmetricKey, SYMMETRIC_KEY_SIZE), SYMMETRIC_KEY_SIZE);
-				message.content = aes.decrypt(ptr, header->messageSize);
-				messages.push_back(message);
+				//AESWrapper aes(AESWrapper::GenerateKey(symKey.symmetricKey, SYMMETRIC_KEY_SIZE), SYMMETRIC_KEY_SIZE);
+				//message.content = aes.decrypt(ptr, header->messageSize);
+				//messages.push_back(message);
 			}
+			// ToDo decrypt & remove
+			char* temp = new char[header->messageSize];
+			memcpy(temp, ptr, header->messageSize);
+			temp[header->messageSize - 1] = '\0';
+			message.content = temp;
+			delete[] temp;
+			messages.push_back(message);
+			//
+			
 			parsedBytes += header->messageSize;
 			ptr += header->messageSize;
 			break;
@@ -701,7 +712,6 @@ bool CClientLogic::requestPendingMessages(std::vector<SMessage>& messages)
 		}
 		
 	}
-
 	delete[] payload;
 
 	return true;
@@ -768,16 +778,17 @@ bool CClientLogic::sendMessage(const std::string& username, const EMessageType t
 	case MSG_SYMMETRIC_KEY_SEND:
 	{
 		SPublicKey publicKey;
-		AESWrapper aes(AESWrapper::GenerateKey(symKey.symmetricKey, SYMMETRIC_KEY_SIZE), SYMMETRIC_KEY_SIZE);
+		//AESWrapper aes(AESWrapper::GenerateKey(symKey.symmetricKey, SYMMETRIC_KEY_SIZE), SYMMETRIC_KEY_SIZE);
 		if (!setClientSymmetricKey(request.payloadHeader.clientId, symKey))
 			return false;  // error described within.
 		if (!getClientPublicKey(request.payloadHeader.clientId, publicKey))
 			return false;  // error described within.
 		RSAPublicWrapper rsa(_rsaDecryptor->getPublicKey());
 		const std::string encryptedKey = hex(rsa.encrypt(symKey.symmetricKey, sizeof(symKey.symmetricKey)));
-		content = new uint8_t[encryptedKey.size()];
-		memcpy(content, encryptedKey.c_str(), encryptedKey.size());
-		request.payloadHeader.contentSize = encryptedKey.size();	
+		request.payloadHeader.contentSize = encryptedKey.size();
+		content = new uint8_t[request.payloadHeader.contentSize];
+		memcpy(content, encryptedKey.c_str(), request.payloadHeader.contentSize);
+			
 		break;
 	}
 	case MSG_TEXT:
@@ -790,11 +801,16 @@ bool CClientLogic::sendMessage(const std::string& username, const EMessageType t
 		}
 		if (!getClientSymmetricKey(request.payloadHeader.clientId, symKey))
 			return false;   // error described within.
-		AESWrapper aes(AESWrapper::GenerateKey(symKey.symmetricKey, SYMMETRIC_KEY_SIZE), SYMMETRIC_KEY_SIZE);
-		const std::string encrypted = aes.encrypt(reinterpret_cast<const uint8_t*>(data.c_str()), data.size());
-		request.payloadHeader.contentSize = encrypted.size();
+		//AESWrapper aes(AESWrapper::GenerateKey(symKey.symmetricKey, SYMMETRIC_KEY_SIZE), SYMMETRIC_KEY_SIZE);
+		//const std::string encrypted = aes.encrypt(reinterpret_cast<const uint8_t*>(data.c_str()), data.size());
+		//request.payloadHeader.contentSize = encrypted.size();
+		//content = new uint8_t[request.payloadHeader.contentSize];
+		//memcpy(content, encrypted.c_str(), request.payloadHeader.contentSize);
+		// todo encrypt and remove
+		request.payloadHeader.contentSize = data.length() + 1;
 		content = new uint8_t[request.payloadHeader.contentSize];
-		memcpy(content, encrypted.c_str(), request.payloadHeader.contentSize);
+		memcpy(content, data.c_str(), data.length());
+		content[data.length()] = '\0';
 		break;
 	}
 	case MSG_FILE:

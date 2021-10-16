@@ -200,8 +200,9 @@ class Server:
         for msg in messages:  # id, from, type, content
             pending = protocol.PendingMessage()
             pending.messageClientID = msg[1]
-            pending.messageType = msg[2]
+            pending.messageType = int(msg[2])
             pending.content = msg[3]
+            pending.messageSize = len(msg[3])
             payload += pending.pack()
         response.payloadSize = len(payload)
         self.write(conn, response.pack() + payload)

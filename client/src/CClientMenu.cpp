@@ -173,8 +173,9 @@ void CClientMenu::handleUserChoice()
 		success = _clientLogic.requestPendingMessages(messages);
 		if (success)
 		{
+			std::cout << std::endl;
 			for (const auto& msg : messages)
-				std::cout << "From: " << msg.username << std::endl << "Content:" << std::endl << msg.content << std::endl;
+				std::cout << "From: " << msg.username << std::endl << "Content:" << std::endl << msg.content << std::endl << std::endl;
 		}
 		break;
 	}

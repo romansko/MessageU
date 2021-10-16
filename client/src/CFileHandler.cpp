@@ -151,7 +151,7 @@ bool CFileHandler::writeLine(const std::string& line) const
 {
 	std::string newline = line;
 	newline.append("\n");
-	return write(reinterpret_cast<const uint8_t*>(newline.c_str()), newline.size());
+	return write(reinterpret_cast<const uint8_t*>(newline.c_str()), newline.size());  // write without null termination.
 }
 
 
