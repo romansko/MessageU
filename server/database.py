@@ -170,3 +170,13 @@ class Database:
         except:
             return []
 
+    def getPendingMessages(self, client_id):
+        try:
+            conn = self.connect()
+            cur = conn.cursor()
+            cur.execute(f"SELECT ID, FromClient, Type, Content FROM {Database.MESSAGES} WHERE ToClient = ?", [client_id])
+            messages = cur.fetchall()
+            conn.close()
+            return messages
+        except:
+            return []

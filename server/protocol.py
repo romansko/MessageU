@@ -7,6 +7,7 @@ __author__ = "Roman Koifman"
 import struct
 from enum import Enum
 
+SERVER_VERSION = 2
 DEF_VAL = 0
 HEADER_SIZE = 7  # Header size without clientID
 CLIENT_ID_SIZE = 16
@@ -23,10 +24,10 @@ RESPONSE_OPTIONS = 6
 # Request Codes
 class ERequestCode(Enum):
     REQUEST_REGISTRATION = 1000  # uuid ignored.
-    REQUEST_USERS = 1001         # payload invalid. payloadSize = 0.
+    REQUEST_USERS = 1001  # payload invalid. payloadSize = 0.
     REQUEST_PUBLIC_KEY = 1002
     REQUEST_SEND_MSG = 1003
-    REQUEST_PENDING_MSG = 1004   # payload invalid. payloadSize = 0.
+    REQUEST_PENDING_MSG = 1004  # payload invalid. payloadSize = 0.
 
 
 # Responses Codes
@@ -43,16 +44,16 @@ class EResponseCode(Enum):
 class EMessageType(Enum):
     MSG_INVALID = DEF_VAL
     MSG_SYMMETRIC_KEY_REQUEST = 1111  # content invalid. contentSize = 0.
-    MSG_SYMMETRIC_KEY = 2222          # content = symmetric key encrypted by destination client's public key.
-    MSG_ENCRYPTED = 3333              # content = encrypted message by symmetric key.
-    MSG_FILE = 4444                   # content = encrypted file by symmetric key.
+    MSG_SYMMETRIC_KEY = 2222  # content = symmetric key encrypted by destination client's public key.
+    MSG_ENCRYPTED = 3333  # content = encrypted message by symmetric key.
+    MSG_FILE = 4444  # content = encrypted file by symmetric key.
 
 
 class RequestHeader:
     def __init__(self):
         self.clientID = b""
-        self.version = DEF_VAL      # 1 byte
-        self.code = DEF_VAL         # 2 bytes
+        self.version = DEF_VAL  # 1 byte
+        self.code = DEF_VAL  # 2 bytes
         self.payloadSize = DEF_VAL  # 4 bytes
         self.size = CLIENT_ID_SIZE + HEADER_SIZE
 
@@ -68,9 +69,9 @@ class RequestHeader:
 
 
 class ResponseHeader:
-    def __init__(self, version, code):
-        self.version = version      # 1 byte
-        self.code = code            # 2 bytes
+    def __init__(self, code):
+        self.version = SERVER_VERSION  # 1 byte
+        self.code = code  # 2 bytes
         self.payloadSize = DEF_VAL  # 4 bytes
         self.size = HEADER_SIZE
 
@@ -92,9 +93,10 @@ class RegistrationRequest:
             return False
         try:
             # trim the byte array after the nul terminating character.
-            nameData = data[self.header.size:self.header.size+CLIENT_NAME_SIZE]
+            nameData = data[self.header.size:self.header.size + CLIENT_NAME_SIZE]
             self.name = str(struct.unpack(f"<{CLIENT_NAME_SIZE}s", nameData)[0].partition(b'\0')[0].decode('utf-8'))
-            keyData = data[self.header.size+CLIENT_NAME_SIZE:self.header.size+CLIENT_NAME_SIZE+CLIENT_PUBLIC_KEY_SIZE]
+            keyData = data[
+                      self.header.size + CLIENT_NAME_SIZE:self.header.size + CLIENT_NAME_SIZE + CLIENT_PUBLIC_KEY_SIZE]
             self.publicKey = struct.unpack(f"<{CLIENT_PUBLIC_KEY_SIZE}s", keyData)[0]
             return True
         except:
@@ -104,8 +106,8 @@ class RegistrationRequest:
 
 
 class RegistrationResponse:
-    def __init__(self, version):
-        self.header = ResponseHeader(version, EResponseCode.RESPONSE_REGISTRATION.value)
+    def __init__(self):
+        self.header = ResponseHeader(EResponseCode.RESPONSE_REGISTRATION.value)
         self.clientID = b""
 
     def pack(self):
@@ -135,8 +137,8 @@ class PublicKeyRequest:
 
 
 class PublicKeyResponse:
-    def __init__(self, version):
-        self.header = ResponseHeader(version, EResponseCode.RESPONSE_PUBLIC_KEY.value)
+    def __init__(self):
+        self.header = ResponseHeader(EResponseCode.RESPONSE_PUBLIC_KEY.value)
         self.clientID = b""
         self.publicKey = b""
 
@@ -165,9 +167,9 @@ class MessageSendRequest:
             clientID = data[self.header.size:self.header.size + CLIENT_ID_SIZE]
             self.clientID = struct.unpack(f"<{CLIENT_ID_SIZE}s", clientID)[0]
             offset = self.header.size + CLIENT_ID_SIZE
-            self.messageType, self.contentSize = struct.unpack("<BL", data[offset:offset+5])
+            self.messageType, self.contentSize = struct.unpack("<BL", data[offset:offset + 5])
             offset = self.header.size + CLIENT_ID_SIZE + 5
-            self.content = struct.unpack(f"<{self.contentSize}s", data[offset:offset+self.contentSize])[0]
+            self.content = struct.unpack(f"<{self.contentSize}s", data[offset:offset + self.contentSize])[0]
             return True
         except:
             self.clientID = b""
@@ -178,8 +180,8 @@ class MessageSendRequest:
 
 
 class MessageSentResponse:
-    def __init__(self, version):
-        self.header = ResponseHeader(version, EResponseCode.RESPONSE_MSG_SENT.value)
+    def __init__(self):
+        self.header = ResponseHeader(EResponseCode.RESPONSE_MSG_SENT.value)
         self.clientID = b""
         self.messageID = b""
 
@@ -190,3 +192,23 @@ class MessageSentResponse:
             return data
         except:
             return b""
+
+
+class PendingMessage:
+    def __init__(self):
+        self.messageClientID = b""
+        self.messageID = 0
+        self.messageType = 0
+        self.messageSize = 0
+        self.content = b""
+
+    def pack(self):
+        try:
+            data = struct.pack(f"<{CLIENT_ID_SIZE}s", self.messageClientID)
+            data += struct.pack("<LBL", self.messageID, self.messageType, self.messageSize)
+            data += struct.pack(f"<{self.messageSize}s", self.content)
+            return data
+        except:
+            return b""
+
+
