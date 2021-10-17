@@ -102,7 +102,7 @@ void CClientMenu::handleUserChoice()
 	}
 
 	clearMenu();
-	std::cout << menuOption.getDescription() << std::endl;
+	std::cout << std::endl;
 	if (!_registered && menuOption.requireRegistration())
 	{
 		std::cout << "You must register first!" << std::endl;
@@ -119,10 +119,10 @@ void CClientMenu::handleUserChoice()
 	{
 		if (_registered)
 		{
-			std::cout << "You have already registered!" << std::endl;
+			std::cout << _clientLogic.getSelfUsername() << ", you have already registered!" << std::endl;
 			return;
 		}
-		const auto username = readUserInput("Please type your username..");
+		const auto username  = readUserInput("Please type your username..");
 		success = _clientLogic.registerClient(username);
 		if (success)
 		{
@@ -155,11 +155,6 @@ void CClientMenu::handleUserChoice()
 	case CMenuOption::EOption::MENU_REQ_PUBLIC_KEY:
 	{
 		const auto username = readUserInput("Please type a username..");
-		if (username == _clientLogic.getSelfUsername())
-		{
-			std::cout << _clientLogic.getSelfUsername() << ", your key is stored in the system already. " << std::endl;
-			return;
-		}
 		success = _clientLogic.requestClientPublicKey(username);
 		if (success)
 		{
@@ -175,7 +170,14 @@ void CClientMenu::handleUserChoice()
 		{
 			std::cout << std::endl;
 			for (const auto& msg : messages)
+			{
 				std::cout << "From: " << msg.username << std::endl << "Content:" << std::endl << msg.content << std::endl << std::endl;
+			}
+			const std::string lastErr = _clientLogic.getLastError();
+			if (!lastErr.empty())
+			{
+				std::cout << "MESSAGES ERROR LOG:" << std::endl << lastErr;
+			}
 		}
 		break;
 	}

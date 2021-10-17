@@ -74,6 +74,5 @@ private:
 
 	CClientLogic _clientLogic;
 	bool         _registered;
-	
 };
 

@@ -199,6 +199,7 @@ class Server:
         messages = self.database.getPendingMessages(request.clientID)
         for msg in messages:  # id, from, type, content
             pending = protocol.PendingMessage()
+            pending.messageID = int(msg[0])
             pending.messageClientID = msg[1]
             pending.messageType = int(msg[2])
             pending.content = msg[3]

@@ -1,5 +1,12 @@
 #include "RSAWrapper.h"
+#include "protocol.h"
 
+
+RSAPublicWrapper::RSAPublicWrapper(SPublicKey& publicKey)
+{
+	CryptoPP::StringSource ss((publicKey.publicKey), sizeof(publicKey.publicKey), true);
+	_publicKey.Load(ss);
+}
 
 RSAPublicWrapper::RSAPublicWrapper(const uint8_t* key, size_t length)
 {
@@ -11,10 +18,6 @@ RSAPublicWrapper::RSAPublicWrapper(const std::string& key)
 {
 	CryptoPP::StringSource ss(key, true);
 	_publicKey.Load(ss);
-}
-
-RSAPublicWrapper::~RSAPublicWrapper()
-{
 }
 
 std::string RSAPublicWrapper::getPublicKey() const
@@ -65,10 +68,6 @@ RSAPrivateWrapper::RSAPrivateWrapper(const std::string& key)
 {
 	CryptoPP::StringSource ss(key, true);
 	_privateKey.Load(ss);
-}
-
-RSAPrivateWrapper::~RSAPrivateWrapper()
-{
 }
 
 std::string RSAPrivateWrapper::getPrivateKey() const

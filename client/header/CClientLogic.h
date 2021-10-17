@@ -21,7 +21,9 @@ public:
 		SClientID     id;
 		std::string   username;
 		SPublicKey    publicKey;
+		bool          publicKeySet    = false;
 		SSymmetricKey symmetricKey;
+		bool          symmetricKeySet = false;
 	};
 
 	struct SMessage
@@ -52,13 +54,12 @@ public:
 	// client logic to be invoked by client menu.
 	bool parseServeInfo();
 	bool parseClientInfo();
-	bool getClientId(const std::string& username, SClientID& clientID) const;
 	std::vector<std::string> getUsernames() const;
 	bool registerClient(const std::string& username);
 	bool requestClientsList();
-	bool requestPendingMessages(std::vector<SMessage>& messages);
 	bool requestClientPublicKey(const std::string& username);
-	bool sendMessage(const std::string& username, const EMessageType type, const std::string data = "");
+	bool requestPendingMessages(std::vector<SMessage>& messages);
+	bool sendMessage(const std::string& username, const EMessageType type, const std::string& data = "");
 
 private:
 	void clearLastError();
@@ -66,10 +67,9 @@ private:
 	bool validateHeader(const SResponseHeader& header, const EResponseCode expectedCode);
 	bool receiveUnknownPayload(const uint8_t* const request, const size_t reqSize, const EResponseCode expectedCode, uint8_t*& payload, size_t& size);
 	bool setClientPublicKey(const SClientID& clientID, const SPublicKey& publicKey);
-	bool getClientPublicKey(const SClientID& clientID, SPublicKey& publicKey);
 	bool setClientSymmetricKey(const SClientID& clientID, const SSymmetricKey& symmetricKey);
-	bool getClientSymmetricKey(const SClientID& clientID, SSymmetricKey& symmetricKey);
-	bool getClientUsername(const SClientID& clientID, std::string& username);
+	bool getClient(const std::string& username, SClient& client) const;
+	bool getClient(const SClientID& clientID, SClient& client) const;
 
 	SClient              _self;           // self symmetric key invalid.
 	std::vector<SClient> _clients;

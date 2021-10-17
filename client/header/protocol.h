@@ -60,16 +60,17 @@ struct SClientID
 	uint8_t uuid[CLIENT_ID_SIZE];
 	SClientID() : uuid{ DEF_VAL } {}
 
-	bool operator==(const SClientID& otherID) {
+	bool operator==(const SClientID& otherID) const {
 		for (size_t i = 0; i < CLIENT_ID_SIZE; ++i)
 			if (uuid[i] != otherID.uuid[i])
 				return false;
 		return true;
 	}
 	
-	bool operator!=(const SClientID& otherID) {
+	bool operator!=(const SClientID& otherID) const {
 		return !(*this == otherID);
 	}
+	
 };
 
 struct SClientName
@@ -185,20 +186,15 @@ struct SRequestMessages
 };
 
 
-struct SPendingMessageHeader
+struct SPendingMessage
 {
 	SClientID     clientId;   // message's clientID.
 	messageID_t   messageId;
 	messageType_t messageType;
 	csize_t       messageSize;
 	/* Variable Size content */
-	SPendingMessageHeader() : messageId(DEF_VAL), messageType(DEF_VAL), messageSize(DEF_VAL) {}
+	SPendingMessage() : messageId(DEF_VAL), messageType(DEF_VAL), messageSize(DEF_VAL) {}
 };
 
-struct SResponseMessages
-{
-	SResponseHeader header;
-	/* Variable SPendingMessageHeader */
-};
 
 #pragma pack(pop)
