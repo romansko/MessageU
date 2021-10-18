@@ -677,7 +677,7 @@ bool CClientLogic::requestPendingMessages(std::vector<SMessage>& messages)
 			{
 				key = _rsaDecryptor->decrypt(ptr, header->messageSize);
 			}
-			catch(CryptoPP::Exception& e)
+			catch(...)
 			{
 				_lastError << "\tMessage ID #" << header->messageId << ": ";
 				_lastError << "Can't decrypt symmetric key." << std::endl;
@@ -715,26 +715,27 @@ bool CClientLogic::requestPendingMessages(std::vector<SMessage>& messages)
 		{
 			if (header->messageSize == 0)
 			{
+				_lastError << "\tMessage ID #" << header->messageId << ": ";
+				_lastError << "Text Message with no content provided." << std::endl;
+				parsedBytes += header->messageSize;
+				ptr         += header->messageSize;
 				continue;
 			}
-			SSymmetricKey symKey;
-			//if (getClientSymmetricKey(header->clientId, symKey))
-			{
-				//AESWrapper aes(AESWrapper::GenerateKey(symKey.symmetricKey, SYMMETRIC_KEY_SIZE), SYMMETRIC_KEY_SIZE);
-				//message.content = aes.decrypt(ptr, header->messageSize);
-				//messages.push_back(message);
-			}
-			// ToDo decrypt & remove
-			char* temp = new char[header->messageSize];
-			memcpy(temp, ptr, header->messageSize);
-			temp[header->messageSize - 1] = '\0';
-			message.content = temp;
-			delete[] temp;
-			messages.push_back(message);
-			//
 
+			message.content = "can't decrypt message"; // assume failure
+			if (client.symmetricKeySet)
+			{
+				AESWrapper aes(client.symmetricKey);
+				try
+				{
+					message.content = aes.decrypt(ptr, header->messageSize);
+				}
+				catch(...) {}  // do nothing. failure already assumed.
+			}
+
+			messages.push_back(message);
 			parsedBytes += header->messageSize;
-			ptr += header->messageSize;
+			ptr         += header->messageSize;
 			break;
 		}
 		case MSG_FILE:
@@ -745,7 +746,7 @@ bool CClientLogic::requestPendingMessages(std::vector<SMessage>& messages)
 			}
 			// todo
 			parsedBytes += header->messageSize;
-			ptr += header->messageSize;
+			ptr         += header->messageSize;
 			break;
 		}
 		default:
@@ -833,16 +834,12 @@ bool CClientLogic::sendMessage(const std::string& username, const EMessageType t
 			_lastError << "Couldn't find " << client.username << "'s symmetric key.";
 			return false;
 		}
-		//AESWrapper aes(AESWrapper::GenerateKey(symKey.symmetricKey, SYMMETRIC_KEY_SIZE), SYMMETRIC_KEY_SIZE);
-		//const std::string encrypted = aes.encrypt(reinterpret_cast<const uint8_t*>(data.c_str()), data.size());
-		//request.payloadHeader.contentSize = encrypted.size();
-		//content = new uint8_t[request.payloadHeader.contentSize];
-		//memcpy(content, encrypted.c_str(), request.payloadHeader.contentSize);
-		// todo encrypt and remove
-		request.payloadHeader.contentSize = data.length() + 1;
-		content = new uint8_t[request.payloadHeader.contentSize];
-		memcpy(content, data.c_str(), data.length());
-		content[data.length()] = '\0';
+		AESWrapper aes(client.symmetricKey);
+		const std::string encrypted = aes.encrypt(data);
+		request.payloadHeader.contentSize = encrypted.size();
+		content = new uint8_t[request.payloadHeader.contentSize + 1];
+		memcpy(content, encrypted.c_str(), request.payloadHeader.contentSize);
+		content[request.payloadHeader.contentSize] = '\0';
 		break;
 	}
 	case MSG_FILE:

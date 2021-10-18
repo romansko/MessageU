@@ -2,7 +2,7 @@
 #include "protocol.h"
 
 
-RSAPublicWrapper::RSAPublicWrapper(SPublicKey& publicKey)
+RSAPublicWrapper::RSAPublicWrapper(const SPublicKey& publicKey)
 {
 	CryptoPP::StringSource ss((publicKey.publicKey), sizeof(publicKey.publicKey), true);
 	_publicKey.Load(ss);

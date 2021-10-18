@@ -19,7 +19,7 @@ private:
 	CryptoPP::RSA::PublicKey _publicKey;
 
 public:
-	RSAPublicWrapper(SPublicKey& publicKey);
+	RSAPublicWrapper(const SPublicKey& publicKey);
 	RSAPublicWrapper(const uint8_t* key, size_t length);
 	RSAPublicWrapper(const std::string& key);
 	

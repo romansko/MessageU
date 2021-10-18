@@ -20,6 +20,11 @@ AESWrapper::AESWrapper()
 	GenerateKey(_key, DEFAULT_KEYLENGTH);
 }
 
+AESWrapper::AESWrapper(SSymmetricKey& symKey)
+{
+	GenerateKey(symKey.symmetricKey, sizeof(symKey.symmetricKey));
+}
+
 AESWrapper::AESWrapper(const uint8_t* key, size_t length)
 {
 	if (length != DEFAULT_KEYLENGTH)
@@ -27,13 +32,15 @@ AESWrapper::AESWrapper(const uint8_t* key, size_t length)
 	memcpy_s(_key, DEFAULT_KEYLENGTH, key, length);
 }
 
-AESWrapper::~AESWrapper()
-{
-}
 
 const uint8_t* AESWrapper::getKey() const 
 { 
 	return _key; 
+}
+
+std::string AESWrapper::encrypt(const std::string& plain) const
+{
+	return encrypt(reinterpret_cast<const uint8_t*>(plain.c_str()), plain.size());
 }
 
 std::string AESWrapper::encrypt(const uint8_t* plain, size_t length) const
