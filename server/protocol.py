@@ -184,7 +184,7 @@ class MessageSendRequest:
             else:
                 self.content = struct.unpack(f"<{self.contentSize}s", data[offset:offset + self.contentSize])[0]
             return True
-        except Exception as e:
+        except:
             self.clientID = b""
             self.messageType = DEF_VAL
             self.contentSize = DEF_VAL

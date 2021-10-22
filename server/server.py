@@ -72,7 +72,8 @@ class Server:
                 sent += len(toSend)
             except:
                 logging.error("Failed to send data to " + conn)
-                return
+                return False
+        return True
 
     def start(self):
         """ Start listen for connections. Contains the main loop. """
@@ -119,8 +120,7 @@ class Server:
             return False
         response.clientID = clnt.ID
         response.header.payloadSize = protocol.CLIENT_ID_SIZE
-        self.write(conn, response.pack())
-        return True
+        return self.write(conn, response.pack())
 
     def handleUsersListRequest(self, conn, data):
         request = protocol.RequestHeader()
@@ -142,8 +142,7 @@ class Server:
                 name = user[1] + bytes('\0' * (protocol.CLIENT_NAME_SIZE - len(user[1])), 'utf-8')
                 payload += name
         response.payloadSize = len(payload)
-        self.write(conn, response.pack() + payload)
-        return True
+        return self.write(conn, response.pack() + payload)
 
     def handlePublicKeyRequest(self, conn, data):
         request = protocol.PublicKeyRequest()
@@ -157,8 +156,7 @@ class Server:
         response.clientID = request.clientID
         response.publicKey = key
         response.header.payloadSize = protocol.CLIENT_ID_SIZE + protocol.CLIENT_PUBLIC_KEY_SIZE
-        self.write(conn, response.pack())
-        return True
+        return self.write(conn, response.pack())
 
     def handleMessageSendRequest(self, conn, data):
         request = protocol.MessageSendRequest()
@@ -179,8 +177,7 @@ class Server:
         response.header.payloadSize = protocol.CLIENT_ID_SIZE + protocol.MSG_ID_SIZE
         response.clientID = request.clientID
         response.messageID = msgId
-        self.write(conn, response.pack())
-        return True
+        return self.write(conn, response.pack())
 
     def handlePendingMessagesRequest(self, conn, data):
         request = protocol.RequestHeader()
@@ -197,6 +194,7 @@ class Server:
 
         payload = b""
         messages = self.database.getPendingMessages(request.clientID)
+        ids = []
         for msg in messages:  # id, from, type, content
             pending = protocol.PendingMessage()
             pending.messageID = int(msg[0])
@@ -204,7 +202,11 @@ class Server:
             pending.messageType = int(msg[2])
             pending.content = msg[3]
             pending.messageSize = len(msg[3])
+            ids += [pending.messageID]
             payload += pending.pack()
         response.payloadSize = len(payload)
-        self.write(conn, response.pack() + payload)
-        return True
+        if self.write(conn, response.pack() + payload):
+            for msg_id in ids:
+                self.database.removeMessage(msg_id)
+            return True
+        return False

@@ -148,6 +148,16 @@ class Database:
         except:
             return False
 
+    def removeMessage(self, msg_id):
+        try:
+            conn = self.connect()
+            cur = conn.cursor()
+            cur.execute(f"DELETE FROM {Database.MESSAGES} WHERE ID = ?", [msg_id])
+            conn.commit()
+            conn.close()
+        except:
+            pass
+
     def getClientsList(self):
         try:
             conn = self.connect()
