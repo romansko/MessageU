@@ -8,7 +8,8 @@
 #include <iostream>
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/algorithm/hex.hpp>
-
+#include <chrono>
+#include <ctime>
 
 std::ostream& operator<<(std::ostream& os, const EMessageType& type)
 {
@@ -756,8 +757,10 @@ bool CClientLogic::requestPendingMessages(std::vector<SMessage>& messages)
 				AESWrapper aes(client.symmetricKey);
 				try
 				{
+					// Set filename with timestamp.
 					std::stringstream filepath;
-					filepath << _fileHandler->getTempFolder() << "\\MessageU\\" << message.username << "_" << header->messageId;
+					auto now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+					filepath << _fileHandler->getTempFolder() << "\\MessageU\\" << message.username << "_" << now;
 					message.content = filepath.str();
 					std::string data = aes.decrypt(ptr, header->messageSize);
 					if (!_fileHandler->writeAtOnce(message.content, data))
