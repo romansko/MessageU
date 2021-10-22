@@ -3,6 +3,7 @@
  * @file CSocketHandler.cpp
  * @brief Handle sending and receiving from a socket.
  * @author Roman Koifman
+ * https://github.com/Romansko/MessageU/blob/main/client/src/CSocketHandler.cpp
  */
 
 #include "CSocketHandler.h"
@@ -37,7 +38,7 @@ bool CSocketHandler::setSocketInfo(const std::string& address, const std::string
 		return false;
 	}
 	_address = address;
-	_port = port;
+	_port    = port;
 
 	return true;
 }
@@ -81,6 +82,9 @@ bool CSocketHandler::isValidPort(const std::string& port)
 	}
 }
 
+/**
+ * Clear socket and connect to new socket.
+ */
 bool CSocketHandler::connect()
 {
 	if (!isValidAddress(_address) || !isValidPort(_port))
@@ -108,93 +112,83 @@ void CSocketHandler::close()
 		if (_socket != nullptr)
 			_socket->close();
 	}
-	catch(...)
-	{
-		/* Do Nothing */
-	}
+	catch (...) {} // Do Nothing
 	clear();
 }
 
 
-// Receive (blocking) PACKET_SIZE bytes from socket and copy to buffer.
-bool CSocketHandler::receive(uint8_t(&buffer)[PACKET_SIZE]) const
-{
-	memset(buffer, 0, PACKET_SIZE);
-	if (_socket == nullptr)
-		return false;
-	try
-	{
-		(void) read(*_socket, boost::asio::buffer(buffer, PACKET_SIZE));
-		if (_bigEndian)
-		{
-			convertEndianness(buffer, PACKET_SIZE);   // todo: handle correctly
-		}
-		
-		return true;
-	}
-	catch(...)
-	{
-		return false;
-	}
-}
-
+/**
+ * Receive size bytes from _socket to buffer.
+ * Return false if unable to receive expected size bytes.
+ */
 bool CSocketHandler::receive(uint8_t* const buffer, const size_t size) const
 {
-	uint8_t receivedBuffer[PACKET_SIZE] = { 0 };
-	uint8_t* ptr = buffer;
-	size_t bytesLeft = size;
-	while (bytesLeft != 0)
-	{
-		if (!receive(receivedBuffer))
-			return false;
-		const size_t bytesToCopy = (bytesLeft > PACKET_SIZE) ? PACKET_SIZE : bytesLeft;
-		memcpy(ptr, receivedBuffer, bytesToCopy);
-		ptr += PACKET_SIZE;
-		bytesLeft -= bytesToCopy;
-	}
-	return (size != 0);  // if reached here return true unless size = 0.
-}
-
-
-// Send (blocking) PACKET_SIZE bytes to socket. Data sent copied from buffer.
-bool CSocketHandler::send(uint8_t(&buffer)[PACKET_SIZE]) const
-{
-	if (_socket == nullptr)
+	if (_socket == nullptr || buffer == nullptr || size == 0)
 		return false;
-	try
+	
+	size_t bytesLeft = size;
+	uint8_t* ptr     = buffer;
+	while (bytesLeft > 0)
 	{
+		uint8_t tempBuffer[PACKET_SIZE] = { 0 };
+
+		boost::system::error_code errorCode; // read() will not throw exception when error_code is passed as argument.
+		
+		size_t bytesRead = read(*_socket, boost::asio::buffer(tempBuffer, PACKET_SIZE), errorCode);
+		if (bytesRead == 0)
+			return false;     // Error. Failed receiving and shouldn't use buffer.
+
 		if (_bigEndian)
 		{
-			convertEndianness(buffer, PACKET_SIZE);  // todo: handle correctly
+			convertEndianness(tempBuffer, bytesRead);   // todo: handle correctly
 		}
-		(void) write(*_socket, boost::asio::buffer(buffer, PACKET_SIZE));
-		return true;
+		
+		const size_t bytesToCopy = (bytesLeft > bytesRead) ? bytesRead : bytesLeft;  // prevent buffer overflow.
+		memcpy(ptr, tempBuffer, bytesToCopy);
+		ptr       += bytesToCopy;
+		bytesLeft = (bytesLeft < bytesToCopy) ? 0 : (bytesLeft - bytesToCopy);  // unsigned protection.
 	}
-	catch(...)
-	{
-		return false;
-	}
+	
+	return true;
 }
 
+/**
+ * Send size bytes from buffer to _socket.
+ * Return false if unable to send expected size bytes.
+ */
 bool CSocketHandler::send(const uint8_t* const buffer, const size_t size) const
 {
-	uint8_t buffToSend[PACKET_SIZE] = { 0 };
+	if (_socket == nullptr || buffer == nullptr || size == 0)
+		return false;
+	
+	size_t bytesLeft   = size;
 	const uint8_t* ptr = buffer;
-	size_t bytesLeft = size;
-	while (bytesLeft != 0)
+	while (bytesLeft > 0)
 	{
+		boost::system::error_code errorCode; // write() will not throw exception when error_code is passed as argument.
+		uint8_t tempBuffer[PACKET_SIZE] = { 0 };
 		const size_t bytesToSend = (bytesLeft > PACKET_SIZE) ? PACKET_SIZE : bytesLeft;
-		memcpy(buffToSend, ptr, bytesToSend);
-		if (!send(buffToSend))
+		
+		memcpy(tempBuffer, ptr, bytesToSend);
+
+		if (_bigEndian)
+		{
+			convertEndianness(tempBuffer, bytesToSend);  // todo: handle correctly
+		}
+
+		const size_t bytesWritten = write(*_socket, boost::asio::buffer(tempBuffer, PACKET_SIZE), errorCode);
+		if (bytesWritten == 0)
 			return false;
-		ptr += bytesToSend;
-		bytesLeft -= bytesToSend;
+	
+		ptr += bytesWritten;
+		bytesLeft = (bytesLeft < bytesWritten) ? 0 : (bytesLeft - bytesWritten);  // unsigned protection.
 	}
-	return (size != 0);  // if reached here return true unless size = 0.
+	return true;
 }
 
 /**
  * Wrap connect, send, receive and close functions.
+ * Inner function have validations. Hence, this function does not validate arguments.
  */
 bool CSocketHandler::sendReceive(const uint8_t* const toSend, const size_t size, uint8_t* const response, const size_t resSize)
 {
@@ -216,6 +210,9 @@ bool CSocketHandler::sendReceive(const uint8_t* const toSend, const size_t size,
 	return true;
 }
 
+/**
+ * Handle Endianness
+ */
 void CSocketHandler::convertEndianness(uint8_t* const buffer, const size_t size) const
 {
 	if (size % sizeof(u_long_type) != 0)

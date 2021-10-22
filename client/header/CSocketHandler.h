@@ -3,6 +3,7 @@
  * @file CSocketHandler.h
  * @brief Handle sending and receiving from a socket.
  * @author Roman Koifman
+ * https://github.com/Romansko/MessageU/blob/main/client/header/CSocketHandler.h
  */
 #pragma once
 #include <string>
@@ -43,9 +44,7 @@ public:
 	bool setSocketInfo(const std::string& address, const std::string& port);
 	bool connect();
 	void close();
-	bool receive(uint8_t(&buffer)[PACKET_SIZE]) const;
 	bool receive(uint8_t* const buffer, const size_t size) const;
-	bool send(uint8_t(&buffer)[PACKET_SIZE]) const;
 	bool send(const uint8_t* const buffer, const size_t size) const;
 	bool sendReceive(const uint8_t* const toSend, const size_t size, uint8_t* const response, const size_t resSize);
 
