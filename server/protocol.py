@@ -160,7 +160,7 @@ class MessageSendRequest:
         self.contentSize = DEF_VAL
         self.content = b""
 
-    def unpack(self, data):
+    def unpack(self, conn, data):
         if not self.header.unpack(data):
             return False
         try:
@@ -169,9 +169,22 @@ class MessageSendRequest:
             offset = self.header.size + CLIENT_ID_SIZE
             self.messageType, self.contentSize = struct.unpack("<BL", data[offset:offset + 5])
             offset = self.header.size + CLIENT_ID_SIZE + 5
-            self.content = struct.unpack(f"<{self.contentSize}s", data[offset:offset + self.contentSize])[0]
+
+            PACKET_SIZE = 1024   # todo packet size const. And make code cleaner..
+            if (offset + self.contentSize) > PACKET_SIZE:
+                bytesRead = PACKET_SIZE - offset
+                self.content = struct.unpack(f"<{bytesRead}s", data[offset:offset + bytesRead])[0]
+                while bytesRead < self.contentSize:
+                    data = conn.recv(PACKET_SIZE)
+                    dataSize = PACKET_SIZE
+                    if (self.contentSize - bytesRead) < PACKET_SIZE:
+                        dataSize = self.contentSize - bytesRead
+                    self.content += struct.unpack(f"<{dataSize}s", data[:dataSize])[0]
+                    bytesRead += dataSize
+            else:
+                self.content = struct.unpack(f"<{self.contentSize}s", data[offset:offset + self.contentSize])[0]
             return True
-        except:
+        except Exception as e:
             self.clientID = b""
             self.messageType = DEF_VAL
             self.contentSize = DEF_VAL

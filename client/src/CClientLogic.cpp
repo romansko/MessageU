@@ -1,14 +1,14 @@
 #include "CClientLogic.h"
-
-#include <iostream>
-#include <boost/algorithm/string/trim.hpp>
-#include <boost/algorithm/hex.hpp>
-
 #include "Base64Wrapper.h"
 #include "RSAWrapper.h"
 #include "AESWrapper.h"
 #include "CFileHandler.h"
 #include "CSocketHandler.h"
+
+#include <iostream>
+#include <boost/algorithm/string/trim.hpp>
+#include <boost/algorithm/hex.hpp>
+
 
 std::ostream& operator<<(std::ostream& os, const EMessageType& type)
 {
@@ -742,11 +742,39 @@ bool CClientLogic::requestPendingMessages(std::vector<SMessage>& messages)
 		{
 			if (header->messageSize == 0)
 			{
+				_lastError << "\tMessage ID #" << header->messageId << ": ";
+				_lastError << "Text Message with no content provided." << std::endl;
+				parsedBytes += header->messageSize;
+				ptr += header->messageSize;
 				continue;
 			}
-			// todo
+
+			message.content = "can't decrypt message"; // assume failure
+			bool push = true;
+			if (client.symmetricKeySet)
+			{
+				AESWrapper aes(client.symmetricKey);
+				try
+				{
+					std::stringstream filepath;
+					filepath << _fileHandler->getTempFolder() << "\\MessageU\\" << message.username << "_" << header->messageId;
+					message.content = filepath.str();
+					std::string data = aes.decrypt(ptr, header->messageSize);
+					if (!_fileHandler->writeAtOnce(message.content, data))
+					{
+						_lastError << "\tMessage ID #" << header->messageId << ": ";
+						_lastError << "Failed to save file on disk." << std::endl;
+						push = false;
+					}
+				}
+				catch (...) {}  // do nothing. failure already assumed.
+			}
+			if (push)
+			{
+				messages.push_back(message);
+			}	
 			parsedBytes += header->messageSize;
-			ptr         += header->messageSize;
+			ptr += header->messageSize;
 			break;
 		}
 		default:
@@ -856,7 +884,7 @@ bool CClientLogic::sendMessage(const std::string& username, const EMessageType t
 			_lastError << "Couldn't find " << client.username << "'s symmetric key.";
 			return false;
 		}
-		AESWrapper aes(AESWrapper::GenerateKey(symKey.symmetricKey, SYMMETRIC_KEY_SIZE), SYMMETRIC_KEY_SIZE);
+			
 		uint8_t* file;
 		size_t bytes;
 		if(!_fileHandler->readAtOnce(data, file, bytes))
@@ -865,10 +893,12 @@ bool CClientLogic::sendMessage(const std::string& username, const EMessageType t
 			_lastError << "Couldn't read file " << data;
 			return false;
 		}
+		AESWrapper aes(client.symmetricKey);
 		const std::string encrypted = aes.encrypt(file, bytes);
 		request.payloadHeader.contentSize = encrypted.size();
 		content = new uint8_t[request.payloadHeader.contentSize];
 		memcpy(content, encrypted.c_str(), request.payloadHeader.contentSize);
+		delete[] file;
 		break;
 	}
 	case MSG_SYMMETRIC_KEY_REQUEST:

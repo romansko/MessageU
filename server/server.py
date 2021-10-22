@@ -163,7 +163,7 @@ class Server:
     def handleMessageSendRequest(self, conn, data):
         request = protocol.MessageSendRequest()
         response = protocol.MessageSentResponse()
-        if not request.unpack(data):
+        if not request.unpack(conn, data):
             logging.error("Failed to parse request header!")
 
         msg = database.Message(request.clientID,

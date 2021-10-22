@@ -32,6 +32,10 @@ public:
     size_t size() const;
 
     bool readAtOnce(const std::string& filepath, uint8_t*& file, size_t& bytes);
+    bool writeAtOnce(std::string& filepath, const std::string& data);
+
+	// Special folders
+    std::string getTempFolder() const;
 
 private:
     std::fstream* _fileStream;

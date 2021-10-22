@@ -19,6 +19,7 @@ CClientMenu::CClientMenu() : _registered(false) {}
 void CClientMenu::clientStop(const std::string& error)
 {
 	std::cout << "Fatal Error: " << error << std::endl << "Client will stop." << std::endl;
+	system("pause");
 	exit(1);
 }
 

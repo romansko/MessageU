@@ -192,11 +192,26 @@ bool CFileHandler::readAtOnce(const std::string& filepath, uint8_t*& file, size_
 		return false;
 
 	file = new uint8_t[bytes];
-	if (!read(file, bytes))
+	const bool success = read(file, bytes);
+	if (!success)
 	{
 		delete[] file;
-		return false;
 	}
 	close();
-	return true;
+	return success;
+}
+
+bool CFileHandler::writeAtOnce(std::string& filepath, const std::string& data)
+{
+	if (data.empty() || !open(filepath, true))
+		return false;
+
+	const bool success = write(reinterpret_cast<const uint8_t* const>(data.c_str()), data.size());
+	close();
+	return success;
+}
+
+std::string CFileHandler::getTempFolder() const
+{
+	return boost::filesystem::temp_directory_path().string();
 }
