@@ -138,9 +138,9 @@ bool CSocketHandler::receive(uint8_t* const buffer, const size_t size) const
 		if (bytesRead == 0)
 			return false;     // Error. Failed receiving and shouldn't use buffer.
 
-		if (_bigEndian)
+		if (_bigEndian)  // It's required to convert from little endian to big endian.
 		{
-			convertEndianness(tempBuffer, bytesRead);   // todo: handle correctly
+			swapBytes(tempBuffer, bytesRead);   
 		}
 		
 		const size_t bytesToCopy = (bytesLeft > bytesRead) ? bytesRead : bytesLeft;  // prevent buffer overflow.
@@ -171,9 +171,9 @@ bool CSocketHandler::send(const uint8_t* const buffer, const size_t size) const
 		
 		memcpy(tempBuffer, ptr, bytesToSend);
 
-		if (_bigEndian)
+		if (_bigEndian)  // It's required to convert from big endian to little endian.
 		{
-			convertEndianness(tempBuffer, bytesToSend);  // todo: handle correctly
+			swapBytes(tempBuffer, bytesToSend);
 		}
 
 		const size_t bytesWritten = write(*_socket, boost::asio::buffer(tempBuffer, PACKET_SIZE), errorCode);
@@ -211,18 +211,21 @@ bool CSocketHandler::sendReceive(const uint8_t* const toSend, const size_t size,
 }
 
 /**
- * Handle Endianness
+ * Handle Endianness.
  */
-void CSocketHandler::convertEndianness(uint8_t* const buffer, const size_t size) const
+void CSocketHandler::swapBytes(uint8_t* const buffer, size_t size) const
 {
-	if (size % sizeof(u_long_type) != 0)
-		return;  // invalid size.
+	if (buffer == nullptr || size < sizeof(uint32_t))
+		return; 
 
+	size -= (size % sizeof(uint32_t));
+	uint32_t* const ptr = reinterpret_cast<uint32_t* const>(buffer);
 	for (size_t i = 0; i < size; ++i)
 	{
-		const auto val = reinterpret_cast<u_long_type*>(&buffer[i * sizeof(u_long_type)]);
-		*val = host_to_network_long(*val);
+		const uint32_t tmp = ((buffer[i] << 8) & 0xFF00FF00) | ((buffer[i] >> 8) & 0xFF00FF);
+		buffer[i] = (tmp << 16) | (tmp >> 16);
 	}
+		
 }
 
 

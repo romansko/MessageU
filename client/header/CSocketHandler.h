@@ -58,7 +58,7 @@ private:
 	bool _bigEndian;
 
 	void clear();
-	void convertEndianness(uint8_t* const buffer, const size_t size) const;
+	void swapBytes(uint8_t* const buffer, size_t size) const;
 
 	
 };
