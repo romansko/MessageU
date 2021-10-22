@@ -482,9 +482,8 @@ bool CClientLogic::registerClient(const std::string& username)
 	_self.publicKey = request.payload.clientPublicKey;
 	if (!storeClientInfo())
 	{
-		// todo: server registered but write to disk failed
 		clearLastError();
-		_lastError << "Failed writing client info to " << CLIENT_INFO;
+		_lastError << "Failed writing client info to " << CLIENT_INFO << ". Please register again with different username.";
 		return false;
 	}
 
@@ -777,7 +776,7 @@ bool CClientLogic::requestPendingMessages(std::vector<SMessage>& messages)
 				messages.push_back(message);
 			}	
 			parsedBytes += header->messageSize;
-			ptr += header->messageSize;
+			ptr         += header->messageSize;
 			break;
 		}
 		default:
@@ -955,8 +954,6 @@ bool CClientLogic::sendMessage(const std::string& username, const EMessageType t
 		_lastError << "Unexpected clientID was received.";
 		return false;
 	}
-
-	std::cout << "Message ID: " << response.payload.messageId << std::endl; // todo debug remove.
 
 	return true;
 }
