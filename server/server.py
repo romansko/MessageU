@@ -16,11 +16,12 @@ from datetime import datetime
 
 class Server:
     DATABASE = 'server.db'
-    PACKET_SIZE = 1024  # Default packet size.
+    PACKET_SIZE = 1024   # Default packet size.
     MAX_QUEUED_CONN = 5  # Default maximum number of queued connections.
-    IS_BLOCKING = False
+    IS_BLOCKING = False  # Do not block!
 
     def __init__(self, host, port):
+        """ Initialize server. Map request codes to handles. """
         self.host = host
         self.port = port
         self.sel = selectors.DefaultSelector()
@@ -35,20 +36,23 @@ class Server:
         }
 
     def accept(self, sock, mask):
+        """ accept a connection from client """
         conn, address = sock.accept()
         conn.setblocking(Server.IS_BLOCKING)
         self.sel.register(conn, selectors.EVENT_READ, self.read)
 
     def read(self, conn, mask):
+        """ read data from client and parse it"""
         data = conn.recv(Server.PACKET_SIZE)
         if data:
             requestHeader = protocol.RequestHeader()
+            success = False
             if not requestHeader.unpack(data):
                 logging.error("Failed to parse request header!")
-            success = False
-            if requestHeader.code in self.requestHandle.keys():
-                success = self.requestHandle[requestHeader.code](conn, data)
-            if not success:  # generic error
+            else:
+                if requestHeader.code in self.requestHandle.keys():
+                    success = self.requestHandle[requestHeader.code](conn, data)  # invoke corresponding handle.
+            if not success:  # return generic error upon failure.
                 responseHeader = protocol.ResponseHeader(protocol.EResponseCode.RESPONSE_ERROR.value)
                 self.write(conn, responseHeader.pack())
             self.database.setLastSeen(requestHeader.clientID, str(datetime.now()))
@@ -56,7 +60,7 @@ class Server:
         conn.close()
 
     def write(self, conn, data):
-        """ make sure packet sent is sized """
+        """ Send a response to client"""
         size = len(data)
         sent = 0
         while sent < size:
@@ -97,6 +101,7 @@ class Server:
                 logging.exception(f"Server main loop exception: {e}")
 
     def handleRegistrationRequest(self, conn, data):
+        """ Register a new user. Save to db. """
         request = protocol.RegistrationRequest()
         response = protocol.RegistrationResponse()
         if not request.unpack(data):
@@ -121,6 +126,7 @@ class Server:
         return self.write(conn, response.pack())
 
     def handleUsersListRequest(self, conn, data):
+        """ Respond with clients list to user request """
         request = protocol.RequestHeader()
         if not request.unpack(data):
             logging.error("Failed to parse request header!")
@@ -143,6 +149,7 @@ class Server:
         return self.write(conn, response.pack() + payload)
 
     def handlePublicKeyRequest(self, conn, data):
+        """ respond with public key of requested user id """
         request = protocol.PublicKeyRequest()
         response = protocol.PublicKeyResponse()
         if not request.unpack(data):
@@ -157,6 +164,7 @@ class Server:
         return self.write(conn, response.pack())
 
     def handleMessageSendRequest(self, conn, data):
+        """ store a message from one user to another """
         request = protocol.MessageSendRequest()
         response = protocol.MessageSentResponse()
         if not request.unpack(conn, data):
@@ -178,6 +186,7 @@ class Server:
         return self.write(conn, response.pack())
 
     def handlePendingMessagesRequest(self, conn, data):
+        """ respond with pending messages """
         request = protocol.RequestHeader()
         response = protocol.ResponseHeader(protocol.EResponseCode.RESPONSE_PENDING_MSG.value)
         if not request.unpack(data):
