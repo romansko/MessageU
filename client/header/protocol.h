@@ -2,7 +2,9 @@
  * MessageU Client
  * @file protocol.h
  * @brief Define protocol between client & server according to the requirements.
+ * structs are aligned to 1 byte with the directive command pragma pack(push, 1).
  * @author Roman Koifman
+ * https://github.com/Romansko/MessageU/blob/main/client/header/protocol.h
  */
 
 #pragma once

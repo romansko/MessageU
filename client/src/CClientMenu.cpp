@@ -2,24 +2,21 @@
  * MessageU Client
  * @file CClientMenu.cpp
  * @brief Interface class for user input. Handle user's requests.
+ * can be replaced by GUI class and invoke CClientLogic correspondingly.
  * @author Roman Koifman
+ * https://github.com/Romansko/MessageU/blob/main/client/src/CClientMenu.cpp
  */
-
-
 #include "CClientMenu.h"
 #include <iostream>
 #include <boost/algorithm/string/trim.hpp>
 
-
-CClientMenu::CClientMenu() : _registered(false) {}
-
 /**
  * Print error and exit client.
  */
-void CClientMenu::clientStop(const std::string& error)
+void CClientMenu::clientStop(const std::string& error) const
 {
 	std::cout << "Fatal Error: " << error << std::endl << "Client will stop." << std::endl;
-	system("pause");
+	pause();
 	exit(1);
 }
 
@@ -41,7 +38,7 @@ void CClientMenu::initialize()
  */
 void CClientMenu::display() const
 {
-	clearMenu();
+	clear();
 	if (_registered && !_clientLogic.getSelfUsername().empty())
 		std::cout << "Hello " << _clientLogic.getSelfUsername() << ", ";
 	std::cout << "MessageU client at your service." << std::endl << std::endl;
@@ -49,13 +46,10 @@ void CClientMenu::display() const
 		std::cout << opt << std::endl;
 }
 
-void CClientMenu::clearMenu() const
-{
-	system("cls");
-}
 
 /**
  * Read input from console.
+ * Do not allow empty lines.
  */
 std::string CClientMenu::readUserInput(const std::string& description) const
 {
@@ -102,18 +96,21 @@ void CClientMenu::handleUserChoice()
 		success = getMenuOption(menuOption);
 	}
 
-	clearMenu();
+	clear();
 	std::cout << std::endl;
 	if (!_registered && menuOption.requireRegistration())
 	{
 		std::cout << "You must register first!" << std::endl;
 		return;
 	}
+
+	// Main selection switch
 	switch (menuOption.getValue())
 	{
 	case CMenuOption::EOption::MENU_EXIT:
 	{
-		system("pause");
+		std::cout << "Client will now exit." << std::endl;
+		pause();
 		exit(0);
 	}
 	case CMenuOption::EOption::MENU_REGISTER:
@@ -123,12 +120,8 @@ void CClientMenu::handleUserChoice()
 			std::cout << _clientLogic.getSelfUsername() << ", you have already registered!" << std::endl;
 			return;
 		}
-		const auto username  = readUserInput("Please type your username..");
+		const std::string username = readUserInput("Please type your username..");
 		success = _clientLogic.registerClient(username);
-		if (success)
-		{
-			std::cout << "Successfully registered on server." << std::endl;
-		}
 		_registered = success;
 		break;
 	}
@@ -144,7 +137,6 @@ void CClientMenu::handleUserChoice()
 				std::cout << "Server has no users registered." << std::endl;
 				return;
 			}
-			
 			std::cout << "Registered users:" << std::endl;
 			for (const auto& username : usernames )
 			{
@@ -155,12 +147,8 @@ void CClientMenu::handleUserChoice()
 	}
 	case CMenuOption::EOption::MENU_REQ_PUBLIC_KEY:
 	{
-		const auto username = readUserInput("Please type a username..");
+		const std::string username = readUserInput("Please type a username..");
 		success = _clientLogic.requestClientPublicKey(username);
-		if (success)
-		{
-			std::cout << username << "'s public key was retrieved successfully." << std::endl;
-		}
 		break;
 	}
 	case CMenuOption::EOption::MENU_REQ_PENDING_MSG:
@@ -174,60 +162,41 @@ void CClientMenu::handleUserChoice()
 			{
 				std::cout << "From: " << msg.username << std::endl << "Content:" << std::endl << msg.content << std::endl << std::endl;
 			}
-			const std::string lastErr = _clientLogic.getLastError();
+			const std::string lastErr = _clientLogic.getLastError();  // contains a string of errors occurred during messages parsing.
 			if (!lastErr.empty())
 			{
-				std::cout << "MESSAGES ERROR LOG:" << std::endl << lastErr;
+				std::cout << std::endl << "MESSAGES ERROR LOG: " << std::endl << lastErr;
 			}
 		}
 		break;
 	}
 	case CMenuOption::EOption::MENU_SEND_MSG:
 	{
-		const auto username = readUserInput("Please type a username..");
-		const auto message = readUserInput("Enter message: ");
+		const std::string username = readUserInput("Please type a username to send message to..");
+		const std::string message  = readUserInput("Enter message: ");
 		success = _clientLogic.sendMessage(username, MSG_TEXT, message);
-		if (success)
-		{
-			std::cout << "Message was sent successfully" << std::endl;
-		}
 		break;
 	}
 	case CMenuOption::EOption::MENU_REQ_SYM_KEY:
 	{
-		const auto username = readUserInput("Please type a username..");
+		const std::string username = readUserInput("Please type a username to request symmetric key from..");
 		success = _clientLogic.sendMessage(username, MSG_SYMMETRIC_KEY_REQUEST);
-		if (success)
-		{
-			std::cout << "Symmetric key request was sent successfully" << std::endl;
-		}
 		break;
 	}
 	case CMenuOption::EOption::MENU_SEND_SYM_KEY:
 	{
-		const auto username = readUserInput("Please type a username..");
+		const std::string username = readUserInput("Please type a username to send symmetric key to..");
 		success = _clientLogic.sendMessage(username, MSG_SYMMETRIC_KEY_SEND);
-		if (success)
-		{
-			std::cout << "Symmetric key was sent successfully" << std::endl;
-		}
 		break;
 	}
 	case CMenuOption::EOption::MENU_SEND_FILE:
 	{
-		const auto username = readUserInput("Please type a username..");
-		const auto message = readUserInput("Enter filepath: ");
+		const std::string username = readUserInput("Please type a username to send file to..");
+		const std::string message  = readUserInput("Enter filepath: ");
 		success = _clientLogic.sendMessage(username, MSG_FILE, message);
-		if (success)
-		{
-			std::cout << "File was sent successfully" << std::endl;
-		}
 		break;
 	}
 	}
 
-	if (!success)
-	{
-		std::cout << _clientLogic.getLastError() << std::endl;
-	}
+	std::cout << (success ? menuOption.getSuccessString() : _clientLogic.getLastError()) << std::endl;
 }

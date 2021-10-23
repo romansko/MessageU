@@ -1,5 +1,12 @@
+/**
+ * MessageU Client
+ * @file CClientLogic.h
+ * @brief The core logic of Client.
+ * CClientLogic received commands from CClientMenu and invokes internal logic such as CFileHandler, CSocketHandler.
+ * @author Roman Koifman
+ * https://github.com/Romansko/MessageU/blob/main/client/header/CClientLogic.h
+ */
 #pragma once
-
 #include "protocol.h"
 #include <sstream>
 #include <string>
@@ -40,12 +47,6 @@ public:
 	CClientLogic& operator=(const CClientLogic& other) = delete;
 	CClientLogic& operator=(CClientLogic&& other) noexcept = delete;
 
-	// static functions
-	static std::string hex(const std::string& str);
-	static std::string hex(const uint8_t* buffer, const size_t size);
-	static std::string unhex(const std::string& str);
-	static std::string unhex(const uint8_t* buffer, const size_t size);
-	
 	// inline getters
 	std::string getLastError() const { return _lastError.str(); }
 	std::string getSelfUsername() const { return _self.username; }

@@ -9,11 +9,8 @@
 #include <string>
 #include "protocol.h"
 
-struct SSymmetricKey;
-
 class AESWrapper
 {
-	
 public:
 	static void GenerateKey(uint8_t* const buffer, const size_t length);
 

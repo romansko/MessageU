@@ -3,6 +3,7 @@
  * @file CFileHandler.cpp
  * @brief Handle files on filesystem.
  * @author Roman Koifman
+ * https://github.com/Romansko/MessageU/blob/main/client/src/CFileHandler.cpp
  */
 
 #include "CFileHandler.h"
@@ -12,13 +13,13 @@
 #include <boost/filesystem.hpp>  // for create_directories
 
 
-CFileHandler::CFileHandler() : _fileStream(nullptr)
+CFileHandler::CFileHandler() : _fileStream(nullptr), _open(false)
 {
 }
 
 CFileHandler::~CFileHandler()
 {
-	delete _fileStream;
+	close();
 }
 
 
@@ -28,28 +29,28 @@ CFileHandler::~CFileHandler()
  */
 bool CFileHandler::open(const std::string& filepath, bool write)
 {
+	const auto flags = write ? (std::fstream::binary | std::fstream::out) : (std::fstream::binary | std::fstream::in);
 	if (filepath.empty())
 		return false;
 	
-	delete _fileStream;
-	_fileStream = new std::fstream;
-	
 	try
 	{
+		close(); // close and clear current fstream before allocating new one.
+		_fileStream = new std::fstream;
 		// create directories within the path if they are do not exist.
 		const auto parent = boost::filesystem::path(filepath).parent_path();
 		if (!parent.empty())
 		{
 			(void)create_directories(parent);
-		}
-		const auto flags = write ? (std::fstream::binary | std::fstream::out) : (std::fstream::binary | std::fstream::in);
+		}	
 		_fileStream->open(filepath, flags);
-		return _fileStream->is_open();
+		_open = _fileStream->is_open();
 	}
 	catch (...)
 	{
-		return false;
+		_open = false;
 	}
+	return _open;
 }
 
 
@@ -69,14 +70,15 @@ void CFileHandler::close()
 	}
 	delete _fileStream;
 	_fileStream = nullptr;
+	_open       = false;
 }
 
 /**
  * Read bytes from fs to dest.
  */
-bool CFileHandler::read(uint8_t* const dest, size_t bytes) const
+bool CFileHandler::read(uint8_t* const dest, const size_t bytes) const
 {
-	if (_fileStream == nullptr || dest == nullptr || bytes == 0)
+	if (_fileStream == nullptr || !_open || dest == nullptr || bytes == 0)
 		return false;
 	try
 	{
@@ -95,10 +97,10 @@ bool CFileHandler::read(uint8_t* const dest, size_t bytes) const
  */
 bool CFileHandler::write(const uint8_t* const src, const size_t bytes) const
 {
+	if (_fileStream == nullptr || !_open || src == nullptr || bytes == 0)
+		return false;
 	try
 	{
-		if (_fileStream == nullptr || src == nullptr || bytes == 0)
-			return false;
 		_fileStream->write(reinterpret_cast<const char*>(src), bytes);
 		return true;
 	}
@@ -130,7 +132,7 @@ bool CFileHandler::remove(const std::string& filePath) const
  */
 bool CFileHandler::readLine(std::string& line) const
 {
-	if (_fileStream == nullptr)
+	if (_fileStream == nullptr || !_open)
 		return false;
 	try
 	{
@@ -160,7 +162,7 @@ bool CFileHandler::writeLine(const std::string& line) const
  */
 size_t CFileHandler::size() const
 {
-	if (_fileStream == nullptr)
+	if (_fileStream == nullptr || !_open)
 		return 0;
 	try
 	{
@@ -180,7 +182,7 @@ size_t CFileHandler::size() const
 
 /**
  * Open and read file.
- * Caller is responsible for freeing allocated memory.
+ * Caller is responsible for freeing allocated memory upon success.
  */
 bool CFileHandler::readAtOnce(const std::string& filepath, uint8_t*& file, size_t& bytes)
 {
@@ -201,7 +203,10 @@ bool CFileHandler::readAtOnce(const std::string& filepath, uint8_t*& file, size_
 	return success;
 }
 
-bool CFileHandler::writeAtOnce(std::string& filepath, const std::string& data)
+/**
+ * Open and write data to file.
+ */
+bool CFileHandler::writeAtOnce(const std::string& filepath, const std::string& data)
 {
 	if (data.empty() || !open(filepath, true))
 		return false;
@@ -211,6 +216,9 @@ bool CFileHandler::writeAtOnce(std::string& filepath, const std::string& data)
 	return success;
 }
 
+/**
+ * Returns absolute path to %TMP% folder.
+ */
 std::string CFileHandler::getTempFolder() const
 {
 	return boost::filesystem::temp_directory_path().string();

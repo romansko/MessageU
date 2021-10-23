@@ -26,7 +26,7 @@
     <ClInclude Include="header\AESWrapper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="header\Base64Wrapper.h">
+    <ClInclude Include="header\CStringer.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="header\CClientLogic.h">
@@ -52,7 +52,7 @@
     <ClCompile Include="src\AESWrapper.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\Base64Wrapper.cpp">
+    <ClCompile Include="src\CStringer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\CClientLogic.cpp">

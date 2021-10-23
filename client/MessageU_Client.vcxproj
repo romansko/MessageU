@@ -150,7 +150,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="header\AESWrapper.h" />
-    <ClInclude Include="header\Base64Wrapper.h" />
+    <ClInclude Include="header\CStringer.h" />
     <ClInclude Include="header\CClientLogic.h" />
     <ClInclude Include="header\CClientMenu.h" />
     <ClInclude Include="header\CFileHandler.h" />
@@ -160,7 +160,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\AESWrapper.cpp" />
-    <ClCompile Include="src\Base64Wrapper.cpp" />
+    <ClCompile Include="src\CStringer.cpp" />
     <ClCompile Include="src\CClientLogic.cpp" />
     <ClCompile Include="src\CClientMenu.cpp" />
     <ClCompile Include="src\CFileHandler.cpp" />

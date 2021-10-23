@@ -11,20 +11,21 @@
 #include <ostream>
 #include <boost/asio/ip/tcp.hpp>
 
-constexpr size_t PACKET_SIZE = 1024;
-constexpr auto LOCALHOST     = "localhost";
-constexpr auto CLOCALHOST    = "LOCALHOST";
+using boost::asio::ip::tcp;
+using boost::asio::io_context;
+
+constexpr size_t PACKET_SIZE = 1024;   // Better be the same on server side.
 
 class CSocketHandler
 {
 public:
 	CSocketHandler();
-	~CSocketHandler();
+	virtual ~CSocketHandler();
 
 	// do not allow
-	CSocketHandler(const CSocketHandler& other) = delete;
-	CSocketHandler(CSocketHandler&& other) noexcept = delete;
-	CSocketHandler& operator=(const CSocketHandler& other) = delete;
+	CSocketHandler(const CSocketHandler& other)                = delete;
+	CSocketHandler(CSocketHandler&& other) noexcept            = delete;
+	CSocketHandler& operator=(const CSocketHandler& other)     = delete;
 	CSocketHandler& operator=(CSocketHandler&& other) noexcept = delete;
 
 	friend std::ostream& operator<<(std::ostream& os, const CSocketHandler* socket) {
@@ -50,15 +51,14 @@ public:
 
 
 private:
-	std::string                     _address;
-	std::string                     _port;
-	boost::asio::io_context*        _ioContext;
-	boost::asio::ip::tcp::resolver* _resolver;
-	boost::asio::ip::tcp::socket*   _socket;
-	bool _bigEndian;
+	std::string    _address;
+	std::string    _port;
+	io_context*    _ioContext;
+	tcp::resolver* _resolver;
+	tcp::socket*   _socket;
+	bool           _bigEndian;
+	bool           _connected;  // indicates that socket has been open and connected.
 
-	void clear();
 	void swapBytes(uint8_t* const buffer, size_t size) const;
 
-	
 };

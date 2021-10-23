@@ -1,22 +1,23 @@
+/**
+ * MessageU Client
+ * @file CClientLogic.cpp
+ * @brief The core logic of Client.
+ * CClientLogic received commands from CClientMenu and invokes internal logic such as CFileHandler, CSocketHandler.
+ * @author Roman Koifman
+ * https://github.com/Romansko/MessageU/blob/main/client/src/CClientLogic.cpp
+ */
 #include "CClientLogic.h"
-#include "Base64Wrapper.h"
+#include "CStringer.h"
 #include "RSAWrapper.h"
 #include "AESWrapper.h"
 #include "CFileHandler.h"
 #include "CSocketHandler.h"
-
-#include <iostream>
-#include <boost/algorithm/string/trim.hpp>
-#include <boost/algorithm/hex.hpp>
-#include <chrono>
-#include <ctime>
 
 std::ostream& operator<<(std::ostream& os, const EMessageType& type)
 {
 	os << static_cast<messageType_t>(type);
 	return os;
 }
-
 
 CClientLogic::CClientLogic() : _fileHandler(nullptr), _socketHandler(nullptr), _rsaDecryptor(nullptr)
 {
@@ -29,48 +30,6 @@ CClientLogic::~CClientLogic()
 	delete _fileHandler;
 	delete _socketHandler;
 	delete _rsaDecryptor;
-}
-
-std::string CClientLogic::hex(const std::string& str)
-{
-	if (str.empty())
-		return "";
-	try
-	{
-		return boost::algorithm::hex(str);
-	}
-	catch(...)
-	{
-		return "";
-	}
-}
-
-std::string CClientLogic::hex(const uint8_t* buffer, const size_t size)
-{
-	if (size == 0 || buffer == nullptr)
-		return "";
-	return hex(std::string(buffer, buffer + size));
-}
-
-std::string CClientLogic::unhex(const std::string& str)
-{
-	if (str.empty())
-		return "";
-	try
-	{
-		return boost::algorithm::unhex(str);
-	}
-	catch (...)
-	{
-		return "";
-	}
-}
-
-std::string CClientLogic::unhex(const uint8_t* buffer, const size_t size)
-{
-	if (size == 0 || buffer == nullptr)
-		return "";
-	return unhex(std::string(buffer, buffer + size));
 }
 
 /**
@@ -93,7 +52,7 @@ bool CClientLogic::parseServeInfo()
 		return false;
 	}
 	_fileHandler->close();
-	boost::algorithm::trim(info);
+	CStringer::trim(info);
 	const auto pos = info.find(':');
 	if (pos == std::string::npos)
 	{
@@ -112,6 +71,9 @@ bool CClientLogic::parseServeInfo()
 	return true;
 }
 
+/**
+ * Parse CLIENT_INFO file.
+ */
 bool CClientLogic::parseClientInfo()
 {
 	std::string line;
@@ -129,7 +91,7 @@ bool CClientLogic::parseClientInfo()
 		_lastError << "Couldn't read username from " << CLIENT_INFO;
 		return false;
 	}
-	boost::algorithm::trim(line);
+	CStringer::trim(line);
 	if (line.length() >= CLIENT_NAME_SIZE)
 	{
 		clearLastError();
@@ -146,7 +108,7 @@ bool CClientLogic::parseClientInfo()
 		return false;
 	}
 
-	line = unhex(line);
+	line = CStringer::unhex(line);
 	const char* unhexed = line.c_str();
 	if (strlen(unhexed) != sizeof(_self.id.uuid))
 	{
@@ -161,7 +123,7 @@ bool CClientLogic::parseClientInfo()
 	std::string decodedKey;
 	while (_fileHandler->readLine(line))
 	{
-		decodedKey.append(Base64Wrapper::decode(line));
+		decodedKey.append(CStringer::decodeBase64(line));
 	}
 	if (decodedKey.empty())
 	{
@@ -171,6 +133,7 @@ bool CClientLogic::parseClientInfo()
 	}
 	try
 	{
+		delete _rsaDecryptor;
 		_rsaDecryptor = new RSAPrivateWrapper(decodedKey);
 	}
 	catch(...)
@@ -208,7 +171,9 @@ void CClientLogic::clearLastError()
 	_lastError.copyfmt(clean);
 }
 
-
+/**
+ * Store client info to CLIENT_INFO file.
+ */
 bool CClientLogic::storeClientInfo()
 {
 	if (!_fileHandler->open(CLIENT_INFO, true))
@@ -227,7 +192,7 @@ bool CClientLogic::storeClientInfo()
 	}
 
 	// Write UUID.
-	const auto hexifiedUUID = hex(_self.id.uuid, sizeof(_self.id.uuid));
+	const auto hexifiedUUID = CStringer::hex(_self.id.uuid, sizeof(_self.id.uuid));
 	if (!_fileHandler->writeLine(hexifiedUUID))
 	{
 		clearLastError();
@@ -236,7 +201,7 @@ bool CClientLogic::storeClientInfo()
 	}
 
 	// Write Base64 encoded private key
-	const auto encodedKey = Base64Wrapper::encode(_rsaDecryptor->getPrivateKey());
+	const auto encodedKey = CStringer::encodeBase64(_rsaDecryptor->getPrivateKey());
 	if (!_fileHandler->write(reinterpret_cast<const uint8_t*>(encodedKey.c_str()), encodedKey.size()))
 	{
 		clearLastError();
@@ -248,6 +213,9 @@ bool CClientLogic::storeClientInfo()
 	return true;
 }
 
+/**
+ * Validate SResponseHeader upon an expected EResponseCode.
+ */
 bool CClientLogic::validateHeader(const SResponseHeader& header, const EResponseCode expectedCode)
 {
 	if (header.code == RESPONSE_ERROR)
@@ -298,6 +266,10 @@ bool CClientLogic::validateHeader(const SResponseHeader& header, const EResponse
 	return true;
 }
 
+/**
+ * Receive unknown payload. Payload size is parsed from header.
+ * Caller responsible for deleting payload upon success.
+ */
 bool CClientLogic::receiveUnknownPayload(const uint8_t* const request, const size_t reqSize, const EResponseCode expectedCode, uint8_t*& payload, size_t& size)
 {
 	SResponseHeader response;
@@ -369,6 +341,9 @@ bool CClientLogic::receiveUnknownPayload(const uint8_t* const request, const siz
 	return true;
 }
 
+/**
+ * Store a client's public key on RAM.
+ */
 bool CClientLogic::setClientPublicKey(const SClientID& clientID, const SPublicKey& publicKey)
 {
 	for (SClient& client : _clients)
@@ -383,7 +358,9 @@ bool CClientLogic::setClientPublicKey(const SClientID& clientID, const SPublicKe
 	return false;
 }
 
-
+/**
+ * Store a client's symmetric key on RAM.
+ */
 bool CClientLogic::setClientSymmetricKey(const SClientID& clientID, const SSymmetricKey& symmetricKey)
 {
 	for (SClient& client : _clients)
@@ -399,6 +376,10 @@ bool CClientLogic::setClientSymmetricKey(const SClientID& clientID, const SSymme
 }
 
 
+/**
+ * Find a client using client ID.
+ * Clients list must be retrieved first.
+ */
 bool CClientLogic::getClient(const SClientID& clientID, SClient& client) const
 {
 	for (const SClient& itr : _clients)
@@ -412,6 +393,10 @@ bool CClientLogic::getClient(const SClientID& clientID, SClient& client) const
 	return false;  // client invalid.
 }
 
+/**
+ * Find a client using username.
+ * Clients list must be retrieved first.
+ */
 bool CClientLogic::getClient(const std::string& username, SClient& client) const
 {
 	for (const SClient& itr : _clients)
@@ -490,6 +475,9 @@ bool CClientLogic::registerClient(const std::string& username)
 	return true;
 }
 
+/**
+ * Invoke logic: request client list from server.
+ */
 bool CClientLogic::requestClientsList()
 {
 	SRequestClientsList request(_self.id);
@@ -535,7 +523,9 @@ bool CClientLogic::requestClientsList()
 }
 
 
-
+/**
+ * Invoke logic: request client public key from server.
+ */
 bool CClientLogic::requestClientPublicKey(const std::string& username)
 {
 	SRequestPublicKey  request(_self.id);
@@ -587,6 +577,10 @@ bool CClientLogic::requestClientPublicKey(const std::string& username)
 	return true;
 }
 
+
+/**
+ * Invoke logic: request pending messages from server.
+ */
 bool CClientLogic::requestPendingMessages(std::vector<SMessage>& messages)
 {
 	SRequestMessages  request(_self.id);
@@ -646,7 +640,7 @@ bool CClientLogic::requestPendingMessages(std::vector<SMessage>& messages)
 		{
 			// unknown clientID. yet allow receiving messages from unknown clients.
 			message.username = "Unknown client ID: ";
-			message.username.append(hex(header->clientId.uuid, sizeof(header->clientId.uuid)));
+			message.username.append(CStringer::hex(header->clientId.uuid, sizeof(header->clientId.uuid)));
 		}
 
 		ptr         += msgHeaderSize;
@@ -691,77 +685,53 @@ bool CClientLogic::requestPendingMessages(std::vector<SMessage>& messages)
 			{
 				_lastError << "\tMessage ID #" << header->messageId << ": ";
 				_lastError << "Invalid symmetric key size (" << keySize << ")." << std::endl;
-				parsedBytes += header->messageSize;
-				ptr         += header->messageSize;
-				continue;
-			}
-
-			memcpy(client.symmetricKey.symmetricKey, key.c_str(), keySize);
-			if (setClientSymmetricKey(header->clientId, client.symmetricKey)) 
-			{
-				message.content = "symmetric key received";
-				messages.push_back(message);
 			}
 			else
 			{
-				_lastError << "\tMessage ID #" << header->messageId << ": ";
-				_lastError << "Couldn't set symmetric key of user: " << message.username << std::endl;
+				memcpy(client.symmetricKey.symmetricKey, key.c_str(), keySize);
+				if (setClientSymmetricKey(header->clientId, client.symmetricKey))
+				{
+					message.content = "symmetric key received";
+					messages.push_back(message);
+				}
+				else
+				{
+					_lastError << "\tMessage ID #" << header->messageId << ": ";
+					_lastError << "Couldn't set symmetric key of user: " << message.username << std::endl;
+				}
 			}
 			parsedBytes += header->messageSize;
 			ptr         += header->messageSize;
 			break;
 		}
 		case MSG_TEXT:
-		{
-			if (header->messageSize == 0)
-			{
-				_lastError << "\tMessage ID #" << header->messageId << ": ";
-				_lastError << "Text Message with no content provided." << std::endl;
-				parsedBytes += header->messageSize;
-				ptr         += header->messageSize;
-				continue;
-			}
-
-			message.content = "can't decrypt message"; // assume failure
-			if (client.symmetricKeySet)
-			{
-				AESWrapper aes(client.symmetricKey);
-				try
-				{
-					message.content = aes.decrypt(ptr, header->messageSize);
-				}
-				catch(...) {}  // do nothing. failure already assumed.
-			}
-
-			messages.push_back(message);
-			parsedBytes += header->messageSize;
-			ptr         += header->messageSize;
-			break;
-		}
 		case MSG_FILE:
 		{
 			if (header->messageSize == 0)
 			{
 				_lastError << "\tMessage ID #" << header->messageId << ": ";
-				_lastError << "Text Message with no content provided." << std::endl;
+				_lastError << "Message with no content provided." << std::endl;
 				parsedBytes += header->messageSize;
 				ptr += header->messageSize;
 				continue;
 			}
-
 			message.content = "can't decrypt message"; // assume failure
-			bool push = true;
+			bool push = true;  // push to msg queue
 			if (client.symmetricKeySet)
 			{
 				AESWrapper aes(client.symmetricKey);
+				std::string data;
 				try
+				{
+					data = aes.decrypt(ptr, header->messageSize);
+				}
+				catch (...) {}  // do nothing. failure already assumed.
+				if (header->messageType == MSG_FILE)
 				{
 					// Set filename with timestamp.
 					std::stringstream filepath;
-					auto now = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-					filepath << _fileHandler->getTempFolder() << "\\MessageU\\" << message.username << "_" << now;
+					filepath << _fileHandler->getTempFolder() << "\\MessageU\\" << message.username << "_" << CStringer::getTimestamp();
 					message.content = filepath.str();
-					std::string data = aes.decrypt(ptr, header->messageSize);
 					if (!_fileHandler->writeAtOnce(message.content, data))
 					{
 						_lastError << "\tMessage ID #" << header->messageId << ": ";
@@ -769,12 +739,13 @@ bool CClientLogic::requestPendingMessages(std::vector<SMessage>& messages)
 						push = false;
 					}
 				}
-				catch (...) {}  // do nothing. failure already assumed.
+				else  // MSG_TEXT
+				{
+					message.content = data;
+				}
 			}
 			if (push)
-			{
 				messages.push_back(message);
-			}	
 			parsedBytes += header->messageSize;
 			ptr         += header->messageSize;
 			break;
@@ -792,28 +763,30 @@ bool CClientLogic::requestPendingMessages(std::vector<SMessage>& messages)
 	return true;
 }
 
+/**
+ * Send a message to another client via the server.
+ */
 bool CClientLogic::sendMessage(const std::string& username, const EMessageType type, const std::string& data)
 {
 	SClient              client; // client to send to
 	SRequestSendMessage  request(_self.id, (type));
 	SResponseMessageSent response;
-	SSymmetricKey        symKey;
 	uint8_t*             content = nullptr;
 	std::map<const EMessageType, const std::string> descriptions = {
 		{MSG_SYMMETRIC_KEY_REQUEST, "symmetric key request"},
-		{MSG_SYMMETRIC_KEY_SEND, "symmetric key"},
-		{MSG_TEXT, "text message"},
-		{MSG_FILE, "file"}
+		{MSG_SYMMETRIC_KEY_SEND,    "symmetric key"},
+		{MSG_TEXT,                  "text message"},
+		{MSG_FILE,                  "file"}
 	};
 	
-	// self validations. 
+	// self validation.
 	if (username == _self.username)
 	{
 		clearLastError();
 		_lastError << username << ", you can't send a " << descriptions[type] << " to yourself..";
 		return false;
 	}
-
+	
 	if (!getClient(username, client))
 	{
 		clearLastError();
@@ -822,9 +795,7 @@ bool CClientLogic::sendMessage(const std::string& username, const EMessageType t
 	}
 	request.payloadHeader.clientId = client.id;
 
-	switch (type)  // Handle payload
-	{
-	case MSG_SYMMETRIC_KEY_SEND:
+	if (type == MSG_SYMMETRIC_KEY_SEND)
 	{
 		if (!client.publicKeySet)
 		{
@@ -832,15 +803,16 @@ bool CClientLogic::sendMessage(const std::string& username, const EMessageType t
 			_lastError << "Couldn't find " << client.username << "'s public key.";
 			return false;
 		}
-			
-		AESWrapper aes;
+
+		AESWrapper    aes;
+		SSymmetricKey symKey;
 		symKey = aes.getKey();
 		if (!setClientSymmetricKey(request.payloadHeader.clientId, symKey))
 		{
 			clearLastError();
 			_lastError << "Failed storing symmetric key of clientID "
-			           << hex(request.payloadHeader.clientId.uuid, sizeof(request.payloadHeader.clientId.uuid))
-				       << ". Please try to request clients list again..";
+				<< CStringer::hex(request.payloadHeader.clientId.uuid, sizeof(request.payloadHeader.clientId.uuid))
+				<< ". Please try to request clients list again..";
 			return false;
 		}
 
@@ -849,14 +821,14 @@ bool CClientLogic::sendMessage(const std::string& username, const EMessageType t
 		request.payloadHeader.contentSize = encryptedKey.size();  // 128
 		content = new uint8_t[request.payloadHeader.contentSize];
 		memcpy(content, encryptedKey.c_str(), request.payloadHeader.contentSize);
-		break;
 	}
-	case MSG_TEXT:
+	else if (type == MSG_TEXT || type == MSG_FILE)
 	{
+		// Common Logic for MSG_TEXT, MSG_FILE
 		if (data.empty())
 		{
 			clearLastError();
-			_lastError << "No text was provided";
+			_lastError << "Empty input was provided!";
 			return false;
 		}
 		if (!client.symmetricKeySet)
@@ -865,51 +837,21 @@ bool CClientLogic::sendMessage(const std::string& username, const EMessageType t
 			_lastError << "Couldn't find " << client.username << "'s symmetric key.";
 			return false;
 		}
-		AESWrapper aes(client.symmetricKey);
-		const std::string encrypted = aes.encrypt(data);
-		request.payloadHeader.contentSize = encrypted.size();
-		content = new uint8_t[request.payloadHeader.contentSize + 1];
-		memcpy(content, encrypted.c_str(), request.payloadHeader.contentSize);
-		content[request.payloadHeader.contentSize] = '\0';
-		break;
-	}
-	case MSG_FILE:
-	{
-		if (data.empty())
-		{
-			clearLastError();
-			_lastError << "No filepath was provided";
-			return false;
-		}
-		if (!client.symmetricKeySet)
-		{
-			clearLastError();
-			_lastError << "Couldn't find " << client.username << "'s symmetric key.";
-			return false;
-		}
-			
-		uint8_t* file;
+
+		uint8_t* file = nullptr;
 		size_t bytes;
-		if(!_fileHandler->readAtOnce(data, file, bytes))
+		if ((type == MSG_FILE) && !_fileHandler->readAtOnce(data, file, bytes))  // data = filename
 		{
 			clearLastError();
-			_lastError << "Couldn't read file " << data;
+			_lastError << "file not found";
 			return false;
 		}
 		AESWrapper aes(client.symmetricKey);
-		const std::string encrypted = aes.encrypt(file, bytes);
+		const std::string encrypted = (type == MSG_TEXT) ? aes.encrypt(data) : aes.encrypt(file, bytes);
 		request.payloadHeader.contentSize = encrypted.size();
 		content = new uint8_t[request.payloadHeader.contentSize];
 		memcpy(content, encrypted.c_str(), request.payloadHeader.contentSize);
 		delete[] file;
-		break;
-	}
-	case MSG_SYMMETRIC_KEY_REQUEST:
-	default:
-	{
-		/* No Content */
-		break;
-	}
 	}
 
 	// prepare message to send
@@ -941,7 +883,7 @@ bool CClientLogic::sendMessage(const std::string& username, const EMessageType t
 	}
 
 	delete[] content;
-	if (msgToSend != reinterpret_cast<uint8_t*>(&request))
+	if (msgToSend != reinterpret_cast<uint8_t*>(&request))  // check if msgToSend was allocated by current code.
 		delete[] msgToSend;
 
 	// Validate SResponseMessageSent header

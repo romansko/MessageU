@@ -7,16 +7,12 @@
  */
 
 #include "CSocketHandler.h"
-
-#include <iostream>
 #include <boost/asio.hpp>
 
 using boost::asio::ip::tcp;
 using boost::asio::io_context;
-using boost::asio::detail::u_long_type;
-using boost::asio::detail::socket_ops::host_to_network_long;
 
-CSocketHandler::CSocketHandler() : _ioContext(nullptr), _resolver(nullptr), _socket(nullptr)
+CSocketHandler::CSocketHandler() : _ioContext(nullptr), _resolver(nullptr), _socket(nullptr), _connected(false)
 {
 	union   // Test for endianness
 	{
@@ -43,20 +39,14 @@ bool CSocketHandler::setSocketInfo(const std::string& address, const std::string
 	return true;
 }
 
-void CSocketHandler::clear()
-{
-	delete _ioContext;
-	delete _resolver;
-	delete _socket;
-	_ioContext = nullptr;
-	_resolver  = nullptr;
-	_socket    = nullptr;
-}
 
+/**
+ * Try parse IP Address. Return false if failed.
+ * Handle special cases of "localhost", "LOCALHOST"
+ */
 bool CSocketHandler::isValidAddress(const std::string& address)
 {
-	const auto cip = address.c_str();
-	if ((strcmp(cip, LOCALHOST) == 0) || (strcmp(cip, CLOCALHOST) == 0))  // special case
+	if ((address == "localhost") || (address == "LOCALHOST"))
 		return true;
 	try
 	{
@@ -69,6 +59,10 @@ bool CSocketHandler::isValidAddress(const std::string& address)
 	return true;
 }
 
+/**
+ * Try to parse a port number from a string.
+ * Return false if failed.
+ */
 bool CSocketHandler::isValidPort(const std::string& port)
 {
 	try
@@ -91,20 +85,24 @@ bool CSocketHandler::connect()
 		return false;
 	try
 	{
-		clear();  // clear before new allocations
+		close();  // close & clear current socket before new allocations.
 		_ioContext = new io_context;
 		_resolver  = new tcp::resolver(*_ioContext);
 		_socket    = new tcp::socket(*_ioContext);
 		boost::asio::connect(*_socket, _resolver->resolve(_address, _port, tcp::resolver::query::canonical_name));
 		_socket->non_blocking(false);  // blocking socket..
-		return true;
+		_connected = true;
 	}
 	catch(...)
 	{
-		return false;
+		_connected = false;
 	}
+	return _connected;
 }
 
+/**
+ * Close & clear current socket.
+ */
 void CSocketHandler::close()
 {
 	try
@@ -113,7 +111,13 @@ void CSocketHandler::close()
 			_socket->close();
 	}
 	catch (...) {} // Do Nothing
-	clear();
+	delete _ioContext;
+	delete _resolver;
+	delete _socket;
+	_ioContext = nullptr;
+	_resolver  = nullptr;
+	_socket    = nullptr;
+	_connected = false;
 }
 
 
@@ -123,7 +127,7 @@ void CSocketHandler::close()
  */
 bool CSocketHandler::receive(uint8_t* const buffer, const size_t size) const
 {
-	if (_socket == nullptr || buffer == nullptr || size == 0)
+	if (_socket == nullptr || !_connected || buffer == nullptr || size == 0)
 		return false;
 	
 	size_t bytesLeft = size;
@@ -158,7 +162,7 @@ bool CSocketHandler::receive(uint8_t* const buffer, const size_t size) const
  */
 bool CSocketHandler::send(const uint8_t* const buffer, const size_t size) const
 {
-	if (_socket == nullptr || buffer == nullptr || size == 0)
+	if (_socket == nullptr || !_connected || buffer == nullptr || size == 0)
 		return false;
 	
 	size_t bytesLeft   = size;

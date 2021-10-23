@@ -1,12 +1,11 @@
 /**
  * MessageU Client
- * @file AESWrapper.h
+ * @file AESWrapper.cpp
  * @brief Handle symmetric encryption.
  * File was given by lecturers. Redundant code was removed for this project.
  * https://github.com/Romansko/MessageU/blob/main/client/src/AESWrapper.cpp
  */
 #include "AESWrapper.h"
-
 #include <modes.h>
 #include <aes.h>
 #include <filters.h>
