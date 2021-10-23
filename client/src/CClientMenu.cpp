@@ -59,6 +59,8 @@ std::string CClientMenu::readUserInput(const std::string& description) const
 	{
 		std::getline(std::cin, input);
 		boost::algorithm::trim(input);
+		if (std::cin.eof())   // ignore ctrl + z.
+			std::cin.clear();
 	} while (input.empty());
 
 	return input;
