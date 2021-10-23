@@ -1,5 +1,6 @@
 """
 MessageU Server
+Python 3.9.6
 main.py: Entry point of MessageU Server.
 https://github.com/Romansko/MessageU/blob/main/server/main.py
 """
