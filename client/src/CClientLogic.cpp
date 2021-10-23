@@ -833,7 +833,8 @@ bool CClientLogic::sendMessage(const std::string& username, const EMessageType t
 			return false;
 		}
 			
-		AESWrapper aes(AESWrapper::GenerateKey(symKey.symmetricKey, SYMMETRIC_KEY_SIZE), SYMMETRIC_KEY_SIZE);
+		AESWrapper aes;
+		symKey = aes.getKey();
 		if (!setClientSymmetricKey(request.payloadHeader.clientId, symKey))
 		{
 			clearLastError();
