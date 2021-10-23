@@ -11,6 +11,7 @@ Instant messaging software. (Maman 15, Defensive Systems Programming).
 * Client code written with ISO C++14 Standard. (Default by Visual Studio 2019).
 * Boost Library 1.77.0 is used. https://www.boost.org
 * Crypto++ Library 8.5 is used. https://www.cryptopp.com
+* <b>These instructions apply for x86 configuration</b>
 
 #### Client project configuration:
 
