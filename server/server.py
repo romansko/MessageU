@@ -1,7 +1,7 @@
 """
 MessageU Server
-Server.py: contains Server class which has socket logics.
-Server class also contains the main loop of the server.
+Server.py: contains Server class which has socket logics. Contains main loop of the server.
+https://github.com/Romansko/MessageU/blob/main/server/server.py
 """
 __author__ = "Roman Koifman"
 
@@ -9,7 +9,6 @@ import logging
 import selectors
 import uuid
 import socket
-import utils
 import database
 import protocol
 from datetime import datetime
@@ -52,7 +51,7 @@ class Server:
             if not success:  # generic error
                 responseHeader = protocol.ResponseHeader(protocol.EResponseCode.RESPONSE_ERROR.value)
                 self.write(conn, responseHeader.pack())
-
+            self.database.setLastSeen(requestHeader.clientID, str(datetime.now()))
         self.sel.unregister(conn)
         conn.close()
 
@@ -77,8 +76,7 @@ class Server:
 
     def start(self):
         """ Start listen for connections. Contains the main loop. """
-        if not self.database.initialize():
-            utils.stopServer("Failed to initialize " + Server.DATABASE)
+        self.database.initialize()
         try:
             sock = socket.socket()
             sock.bind((self.host, self.port))
@@ -90,13 +88,13 @@ class Server:
             return False
         print(f"Server is listening for connections on port {self.port}..")
         while True:
-            events = self.sel.select()
-            for key, mask in events:
-                try:
+            try:
+                events = self.sel.select()
+                for key, mask in events:
                     callback = key.data
                     callback(key.fileobj, mask)
-                except Exception as e:
-                    print(f": Server exception handling selector event: {e}")
+            except Exception as e:
+                logging.exception(f"Server main loop exception: {e}")
 
     def handleRegistrationRequest(self, conn, data):
         request = protocol.RegistrationRequest()
@@ -139,7 +137,7 @@ class Server:
         for user in clients:
             if user[0] != request.clientID:  # Do not send self. Requirement.
                 payload += user[0]
-                name = user[1] + bytes('\0' * (protocol.CLIENT_NAME_SIZE - len(user[1])), 'utf-8')
+                name = user[1] + bytes('\0' * (protocol.NAME_SIZE - len(user[1])), 'utf-8')
                 payload += name
         response.payloadSize = len(payload)
         return self.write(conn, response.pack() + payload)
@@ -155,7 +153,7 @@ class Server:
             return False
         response.clientID = request.clientID
         response.publicKey = key
-        response.header.payloadSize = protocol.CLIENT_ID_SIZE + protocol.CLIENT_PUBLIC_KEY_SIZE
+        response.header.payloadSize = protocol.CLIENT_ID_SIZE + protocol.PUBLIC_KEY_SIZE
         return self.write(conn, response.pack())
 
     def handleMessageSendRequest(self, conn, data):

@@ -1,6 +1,7 @@
 """
 MessageU Server
 database.py: handles server's database.
+https://github.com/Romansko/MessageU/blob/main/server/database.py
 """
 __author__ = "Roman Koifman"
 
@@ -21,9 +22,9 @@ class Client:
         """ Validate Client attributes according to the requirements """
         if not self.ID or len(self.ID) != protocol.CLIENT_ID_SIZE:
             return False
-        if not self.Name or len(self.Name) >= protocol.CLIENT_NAME_SIZE:
+        if not self.Name or len(self.Name) >= protocol.NAME_SIZE:
             return False
-        if not self.PublicKey or len(self.PublicKey) != protocol.CLIENT_PUBLIC_KEY_SIZE:
+        if not self.PublicKey or len(self.PublicKey) != protocol.PUBLIC_KEY_SIZE:
             return False
         if not self.LastSeen:
             return False
@@ -59,15 +60,41 @@ class Database:
         self.name = name
 
     def connect(self):
-        conn = sqlite3.connect(self.name)
+        conn = sqlite3.connect(self.name)  # doesn't raise exception.
         conn.text_factory = bytes
         return conn
 
-    def initialize(self):
+    def executescript(self, script):
         conn = self.connect()
-        commit = False
         try:
-            conn.executescript(f"""
+            conn.executescript(script)
+            conn.commit()
+        except:
+            pass
+        conn.close()
+
+    def execute(self, query, args, commit=False, get_last_row=False):
+        """ Given an query and args, execute query, and return the results. """
+        results = None
+        conn = self.connect()
+        try:
+            cur = conn.cursor()
+            cur.execute(query, args)
+            if commit:
+                conn.commit()
+                results = True
+            else:
+                results = cur.fetchall()
+            if get_last_row:
+                results = cur.lastrowid  # special query.
+        except Exception as e:
+            pass
+        conn.close()  # commit is not required.
+        return results
+
+    def initialize(self):
+        # Try to create Clients table
+        self.executescript(f"""
             CREATE TABLE {Database.CLIENTS}(
               ID CHAR(16) NOT NULL PRIMARY KEY,
               Name CHAR(255) NOT NULL,
@@ -75,11 +102,9 @@ class Database:
               LastSeen DATE
             );
             """)
-            commit = True
-        except:
-            pass  # Table possibly already exists
-        try:  # INTEGER PRIMARY KEY is auto incremented..
-            conn.executescript(f"""
+
+        # Try to create Messages table
+        self.executescript(f"""
             CREATE TABLE {Database.MESSAGES}(
               ID INTEGER PRIMARY KEY,
               ToClient CHAR(16) NOT NULL,
@@ -90,103 +115,59 @@ class Database:
               FOREIGN KEY(FromClient) REFERENCES {Database.CLIENTS}(ID)
             );
             """)
-            commit = True
-        except:
-            pass  # Table possibly already exists
-        try:
-            if commit:
-                conn.commit()
-            conn.close()
-            return True
-        except:
-            return False
+
 
     def clientUsernameExists(self, username):
         """ Check whether a username already exists within database """
-        conn = self.connect()
-        cur = conn.cursor()
-        cur.execute(f"SELECT * FROM {Database.CLIENTS} WHERE Name = ?", [username])
-        exists = len(cur.fetchall()) > 0
-        conn.close()
-        return exists
+        results = self.execute(f"SELECT * FROM {Database.CLIENTS} WHERE Name = ?", [username])
+        if not results:
+            return False
+        return len(results) > 0
 
-    def clientIdExists(self, id):
+    def clientIdExists(self, client_id):
         """ Check whether an client ID already exists within database """
-        conn = self.connect()
-        cur = conn.cursor()
-        cur.execute(f"SELECT * FROM {Database.CLIENTS} WHERE ID = ?", [id])
-        exists = len(cur.fetchall()) > 0
-        conn.close()
-        return exists
+        results = self.execute(f"SELECT * FROM {Database.CLIENTS} WHERE ID = ?", [client_id])
+        if not results:
+            return False
+        return len(results) > 0
 
     def storeClient(self, clnt):
+        """ Store a client into database """
         if not type(clnt) is Client or not clnt.validate():
             return False
-        try:
-            conn = self.connect()
-            cur = conn.cursor()
-            cur.execute(f"INSERT INTO {Database.CLIENTS} VALUES (?, ?, ?, ?)",
-                        [clnt.ID, clnt.Name, clnt.PublicKey, clnt.LastSeen])
-            conn.commit()
-            conn.close()
-            return True
-        except Exception as e:
-            return False
+        return self.execute(f"INSERT INTO {Database.CLIENTS} VALUES (?, ?, ?, ?)",
+                            [clnt.ID, clnt.Name, clnt.PublicKey, clnt.LastSeen], True)
 
     def storeMessage(self, msg):
+        """ Store a message into database """
         if not type(msg) is Message or not msg.validate():
             return False
-        try:
-            conn = self.connect()
-            cur = conn.cursor()
-            cur.execute(f"INSERT INTO {Database.MESSAGES}(ToClient, FromClient, Type, Content) VALUES (?, ?, ?, ?)",
-                        [msg.ToClient, msg.FromClient, msg.Type, msg.Content])
-            msgId = cur.lastrowid
-            conn.commit()
-            conn.close()
-            return msgId
-        except:
-            return False
+        results = self.execute(
+            f"INSERT INTO {Database.MESSAGES}(ToClient, FromClient, Type, Content) VALUES (?, ?, ?, ?)",
+            [msg.ToClient, msg.FromClient, msg.Type, msg.Content], True, True)
+        return results
 
     def removeMessage(self, msg_id):
-        try:
-            conn = self.connect()
-            cur = conn.cursor()
-            cur.execute(f"DELETE FROM {Database.MESSAGES} WHERE ID = ?", [msg_id])
-            conn.commit()
-            conn.close()
-        except:
-            pass
+        """ remove a message by id from database """
+        return self.execute(f"DELETE FROM {Database.MESSAGES} WHERE ID = ?", [msg_id], True)
+
+    def setLastSeen(self, client_id, time):
+        """ set last seen given a client_id """
+        return self.execute(f"UPDATE {Database.CLIENTS} SET LastSeen = ? WHERE ID = ?",
+                            [time, client_id], True)
 
     def getClientsList(self):
-        try:
-            conn = self.connect()
-            cur = conn.cursor()
-            cur.execute(f"SELECT ID, Name FROM {Database.CLIENTS}")
-            clients = cur.fetchall()
-            conn.close()
-            return clients
-        except:
-            return []
+        """ query for all clients """
+        return self.execute(f"SELECT ID, Name FROM {Database.CLIENTS}", [])
 
     def getClientPublicKey(self, client_id):
-        try:
-            conn = self.connect()
-            cur = conn.cursor()
-            cur.execute(f"SELECT PublicKey FROM {Database.CLIENTS} WHERE ID = ?", [client_id])
-            key = cur.fetchall()[0][0]
-            conn.close()
-            return key
-        except:
-            return []
+        """ given a client id, return a public key. """
+        results = self.execute(f"SELECT PublicKey FROM {Database.CLIENTS} WHERE ID = ?", [client_id])
+        if not results:
+            return None
+        return results[0][0]
 
     def getPendingMessages(self, client_id):
-        try:
-            conn = self.connect()
-            cur = conn.cursor()
-            cur.execute(f"SELECT ID, FromClient, Type, Content FROM {Database.MESSAGES} WHERE ToClient = ?", [client_id])
-            messages = cur.fetchall()
-            conn.close()
-            return messages
-        except:
-            return []
+        """ given a client id, return pending messages for that client. """
+        return self.execute(f"SELECT ID, FromClient, Type, Content FROM {Database.MESSAGES} WHERE ToClient = ?",
+                            [client_id])
