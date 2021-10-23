@@ -1,6 +1,7 @@
 """
 MessageU Server
 utils.py: collection of small functions which make MessageU server's patterns shorter & easier.
+https://github.com/Romansko/MessageU/blob/main/server/utils.py
 """
 __author__ = "Roman Koifman"
 

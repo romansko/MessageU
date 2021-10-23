@@ -1,6 +1,7 @@
 """
 MessageU Server
 main.py: Entry point of MessageU Server.
+https://github.com/Romansko/MessageU/blob/main/server/main.py
 """
 __author__ = "Roman Koifman"
 
