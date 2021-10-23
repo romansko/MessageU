@@ -135,7 +135,6 @@ bool CSocketHandler::receive(uint8_t* const buffer, const size_t size) const
 	while (bytesLeft > 0)
 	{
 		uint8_t tempBuffer[PACKET_SIZE] = { 0 };
-
 		boost::system::error_code errorCode; // read() will not throw exception when error_code is passed as argument.
 		
 		size_t bytesRead = read(*_socket, boost::asio::buffer(tempBuffer, PACKET_SIZE), errorCode);
