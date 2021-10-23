@@ -5,6 +5,7 @@ https://github.com/Romansko/MessageU/blob/main/server/database.py
 """
 __author__ = "Roman Koifman"
 
+import logging
 import sqlite3
 import protocol
 
@@ -70,7 +71,7 @@ class Database:
             conn.executescript(script)
             conn.commit()
         except:
-            pass
+            pass  # table might exist already
         conn.close()
 
     def execute(self, query, args, commit=False, get_last_row=False):
@@ -88,7 +89,7 @@ class Database:
             if get_last_row:
                 results = cur.lastrowid  # special query.
         except Exception as e:
-            pass
+            logging.exception(f'database execute: {e}')
         conn.close()  # commit is not required.
         return results
 
@@ -115,7 +116,6 @@ class Database:
               FOREIGN KEY(FromClient) REFERENCES {Database.CLIENTS}(ID)
             );
             """)
-
 
     def clientUsernameExists(self, username):
         """ Check whether a username already exists within database """
