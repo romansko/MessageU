@@ -22,6 +22,7 @@ class Server:
 
     def __init__(self, host, port):
         """ Initialize server. Map request codes to handles. """
+        logging.basicConfig(format='[%(levelname)s - %(asctime)s]: %(message)s', level=logging.INFO, datefmt='%H:%M:%S')
         self.host = host
         self.port = port
         self.sel = selectors.DefaultSelector()
@@ -43,6 +44,7 @@ class Server:
 
     def read(self, conn, mask):
         """ read data from client and parse it"""
+        logging.info("A client has connected.")
         data = conn.recv(Server.PACKET_SIZE)
         if data:
             requestHeader = protocol.RequestHeader()
@@ -74,8 +76,9 @@ class Server:
                 conn.send(toSend)
                 sent += len(toSend)
             except:
-                logging.error("Failed to send data to " + conn)
+                logging.error("Failed to send response to " + conn)
                 return False
+        logging.info("Response sent successfully.")
         return True
 
     def start(self):
@@ -117,10 +120,12 @@ class Server:
         except:
             logging.error("Registration Request: Failed to connect to database.")
             return False
+        
         clnt = database.Client(uuid.uuid4().hex, request.name, request.publicKey, str(datetime.now()))
         if not self.database.storeClient(clnt):
-            logging.error("Registration Request: Failed to store client.")
+            logging.error(f"Registration Request: Failed to store client {request.name}.")
             return False
+        logging.info(f"Successfully registered client {request.name}.")
         response.clientID = clnt.ID
         response.header.payloadSize = protocol.CLIENT_ID_SIZE
         return self.write(conn, response.pack())
@@ -129,7 +134,7 @@ class Server:
         """ Respond with clients list to user request """
         request = protocol.RequestHeader()
         if not request.unpack(data):
-            logging.error("Failed to parse request header!")
+            logging.error("Users list Request: Failed to parse request header!")
         try:
             if not self.database.clientIdExists(request.clientID):
                 logging.info(f"Users list Request: clientID ({request.clientID}) does not exists!")
@@ -146,6 +151,7 @@ class Server:
                 name = user[1] + bytes('\0' * (protocol.NAME_SIZE - len(user[1])), 'utf-8')
                 payload += name
         response.payloadSize = len(payload)
+        logging.info(f"Clients list was successfully built for clientID ({request.clientID}).")
         return self.write(conn, response.pack() + payload)
 
     def handlePublicKeyRequest(self, conn, data):
@@ -153,7 +159,7 @@ class Server:
         request = protocol.PublicKeyRequest()
         response = protocol.PublicKeyResponse()
         if not request.unpack(data):
-            logging.error("Failed to parse request header!")
+            logging.error("PublicKey Request: Failed to parse request header!")
         key = self.database.getClientPublicKey(request.clientID)
         if not key:
             logging.info(f"PublicKey Request: clientID doesn't exists.")
@@ -161,6 +167,7 @@ class Server:
         response.clientID = request.clientID
         response.publicKey = key
         response.header.payloadSize = protocol.CLIENT_ID_SIZE + protocol.PUBLIC_KEY_SIZE
+        logging.info(f"Public Key response was successfully built to clientID ({request.header.clientID}).")
         return self.write(conn, response.pack())
 
     def handleMessageSendRequest(self, conn, data):
@@ -168,7 +175,7 @@ class Server:
         request = protocol.MessageSendRequest()
         response = protocol.MessageSentResponse()
         if not request.unpack(conn, data):
-            logging.error("Failed to parse request header!")
+            logging.error("Send Message Request: Failed to parse request header!")
 
         msg = database.Message(request.clientID,
                                request.header.clientID,
@@ -183,6 +190,7 @@ class Server:
         response.header.payloadSize = protocol.CLIENT_ID_SIZE + protocol.MSG_ID_SIZE
         response.clientID = request.clientID
         response.messageID = msgId
+        logging.info(f"Message from clientID ({request.header.clientID}) successfully stored.")
         return self.write(conn, response.pack())
 
     def handlePendingMessagesRequest(self, conn, data):
@@ -190,13 +198,13 @@ class Server:
         request = protocol.RequestHeader()
         response = protocol.ResponseHeader(protocol.EResponseCode.RESPONSE_PENDING_MSG.value)
         if not request.unpack(data):
-            logging.error("Failed to parse request header!")
+            logging.error("Pending messages request: Failed to parse request header!")
         try:
             if not self.database.clientIdExists(request.clientID):
                 logging.info(f"clientID ({request.clientID}) does not exists!")
                 return False
         except:
-            logging.error("Failed to connect to database.")
+            logging.error("Pending messages request: Failed to connect to database.")
             return False
 
         payload = b""
@@ -212,6 +220,7 @@ class Server:
             ids += [pending.messageID]
             payload += pending.pack()
         response.payloadSize = len(payload)
+        logging.info(f"Pending messages to clientID ({request.clientID}) successfully extracted.")
         if self.write(conn, response.pack() + payload):
             for msg_id in ids:
                 self.database.removeMessage(msg_id)
