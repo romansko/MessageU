@@ -63,7 +63,6 @@ Boost 1.77.0 Installation Instructions are based on [Pattarapol Koosalapeerom's 
 
 The following configurations already set within the sln. Unlike above libraries, it doesn't need external references hence probably shouldn't be modifed.
 * Not using precompiled headers. 
-* Added additional include path $(ProjectDir)\cryptopp_wrapper\
 
 
 
